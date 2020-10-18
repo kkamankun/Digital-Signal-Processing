@@ -20,8 +20,8 @@ void initialize() {
 	int interval_size = 4;
 
 	// Y
-	SQ_Y::D = new float[L];
-	SQ_Y::R = new float[L - 1];
+	SQ_Y::D = new float[L + 1];
+	SQ_Y::R = new float[L];
 
 	SQ_Y::D[0] = 0;
 	SQ_Y::D[L] = 1024;
@@ -31,8 +31,8 @@ void initialize() {
 	}
 
 	// Cb
-	SQ_Cb::D = new float[L];
-	SQ_Cb::R = new float[L - 1];
+	SQ_Cb::D = new float[L + 1];
+	SQ_Cb::R = new float[L];
 
 	SQ_Cb::D[0] = 0;
 	SQ_Cb::D[L] = 1024;
@@ -42,8 +42,8 @@ void initialize() {
 	}
 
 	// Cr
-	SQ_Cr::D = new float[L];
-	SQ_Cr::R = new float[L - 1];
+	SQ_Cr::D = new float[L + 1];
+	SQ_Cr::R = new float[L];
 
 	SQ_Cr::D[0] = 0;
 	SQ_Cr::D[L] = 1024;
@@ -129,6 +129,51 @@ void getNewLevels(unsigned short **P) {
 	}
 }
 
+float getQuantizedValue_Y(unsigned short key) {
+
+	// Y
+	if (key == 1023) { //Check if it is the MAX Value
+		return SQ_Y::R[L - 1]; //Last position value of SQ_Y::R
+	}
+	int i;
+	for (i = 0; i < L; i++) {
+		if (key >= SQ_Y::D[i] && key < SQ_Y::D[i + 1])
+			break;
+	}
+
+	return SQ_Y::R[i] / 4;
+}
+
+float getQuantizedValue_Cb(unsigned short key) {
+
+	// Cb
+	if (key == 1023) { //Check if it is the MAX Value
+		return SQ_Cb::R[L - 1]; //Last position value of SQ_Cb::R
+	}
+	int i;
+	for (i = 0; i < L; i++) {
+		if (key >= SQ_Cb::D[i] && key < SQ_Cb::D[i + 1])
+			break;
+	}
+
+	return SQ_Cb::R[i] / 4;
+}
+
+float getQuantizedValue_Cr(unsigned short key) {
+
+	// Cr
+	if (key == 1023) { //Check if it is the MAX Value
+		return SQ_Cr::R[L - 1]; //Last position value of SQ_Cr::R
+	}
+	int i;
+	for (i = 0; i < L; i++) {
+		if (key >= SQ_Cr::D[i] && key < SQ_Cr::D[i + 1])
+			break;
+	}
+
+	return SQ_Cr::R[i] / 4;
+}
+
 void printD() {
 	cout << "[Y] Values of the intervals (D) are : " << endl; // Y
 	for (int i = 0; i < L + 1; i++) {
@@ -174,50 +219,6 @@ float getQuantizationError(float previousMSE, float currentMSE) {
 	return (previousMSE - currentMSE) / currentMSE;
 }
 
-//float getMSE(char *memblock) {
-//
-//	int N = ISIZE;
-//	int error;
-//	double mse, sum = 0;
-//	double psnr[3];
-//
-//	for (int i = 0; i < 3; i++) { // Y, Cb, Cr의 PSNR을 각각 측정
-//		for (int ch = 0; ch < m_iSize[i]; ch++) {
-//			error = m_ui16Comp[i][ch] - m_ui16Comp2[i][ch];
-//			sum += error * error;
-//		}
-//		mse = sum / N;
-//		psnr[i] = 20 * log10(1023 / sqrt(mse));
-//	}
-//	
-//	double MSE = 0, diff;
-//	float QV;
-//	for (int i = 0; i < FileSizeinBytes; i++) {
-//		unsigned char val = memblock[i];
-//		QV = getQuantizedValue(val);
-//		diff = pow((val - QV), 2);
-//		MSE += diff;
-//	}
-//	MSE /= FileSizeinBytes;
-//	return MSE;
-//}
-//
-//float getQuantizedValue(float key) {
-//
-//	//Check if it is the MAx Value
-//	if (key == MAX_VAL) {
-//		//Last position value  of SQ::R
-//		return SQ::R[L - 1];
-//	}
-//	int i;
-//	for (i = 0; i < L; i++) {
-//		if (key >= SQ::T[i] && key < SQ::T[i + 1])
-//			break;
-//	}
-//
-//	return SQ::R[i];
-//}
-
 int main()
 {
 	////////// Step 1. YCbCr 10-bit input image를 읽어서 메모리에 저장 //////////
@@ -242,12 +243,6 @@ int main()
 	fclose(input_image);
 
 	////////// Step 2. Input image에 scalar non-uniform quantization //////////
-	m_ui8Comp = new unsigned char*[3];
-	for (int cnt = 0; cnt < 3; cnt++) {
-		m_ui8Comp[cnt] = new unsigned char[ISIZE];
-	}
-
-	////////////////////////////////////////////////////////////////////////////
 	float previousMSE, currentMSE, quantization_error = 1;
 
 	unsigned short **P = new unsigned short*[3]; // Counts stored in P
@@ -255,13 +250,6 @@ int main()
 		P[cnt] = new unsigned short[1024];
 		memset(P[cnt], 0, sizeof(unsigned short) * 1024);
 	}
-
-	//for (int cnt = 0; cnt < 3; cnt++) {
-	//	for (int i = 0; i < 1024; i++) {
-	//		cout << i << ": " << P[cnt][i] << " ";
-	//	}
-	//	cout << endl << endl;
-	//}
 
 	unsigned short pixel; // 0부터 1023 사이의 픽셀값 카운트
 	for (int i = 0; i < 3; i++) {
@@ -271,40 +259,58 @@ int main()
 		}
 	}
 
-	//for (int cnt = 0; cnt < 3; cnt++) {
-	//	for (int i = 0; i < 1024; i++) {
-	//		cout << i << ": " << P[cnt][i] << "\t\t\t";
-	//	}
-	//	cout << endl << endl;
-	//}
-
 	initialize();
 
 	int iterationNo = 1;
 	calculateIntervals();
 	getNewLevels(P);
-	
-	printD();
-	printR();
 
-	//while (quantization_error > 0.001) { // 양자화 에러가 threshold보다 작아질 때까지 반복적으로 업데이트
-	//	cout << "------------------- Iteration No. " << iterationNo++
-	//		<< ". ----------------------" << endl;
-	//	calculateIntervals();
-	//	getNewLevels(P);
-	//	printD();
-	//	printR();
-	//	previousMSE = currentMSE;
-	//	currentMSE = getMSE(memblock);
-	//	cout << "Current MSE is: " << currentMSE << endl;
-	//	quantization_error = getQuantizationError(previousMSE, currentMSE);
-	//	cout << "양자화 에러: " << quantization_error << endl;
-	//	cout << "xxxxxxxxxxxxxxxxxxxxxx--End of Iteration " << iterationNo - 1
-	//		<< ". xxxxxxxxxxxxxxxxxxxxxx" << endl << endl;
-	//}
+	for (int i = 0; i < 10;i++) { // 정해진 횟수를 수행할 때 까지, decision level과 reconstruction level을 반복적으로 업데이트
+		calculateIntervals();
+		getNewLevels(P);
+	}
 
 
 
+	cout << endl << "----------- Quantizing the file ..." << endl;
+	m_ui8Comp = new unsigned char*[3];
+	for (int ch = 0; ch < 3; ch++) {
+		m_ui8Comp[ch] = new unsigned char[ISIZE];
+		memset(m_ui8Comp[ch], 0, sizeof(unsigned char)*ISIZE);
+	}
 
+	for (int i = 0; i < m_iSize[0]; i++) { // Y
+		unsigned short origvalue = m_ui16Comp[0][i];
+		unsigned char val = floor(getQuantizedValue_Y(origvalue) + 0.5);
+		// cout << i << " " << (int)val << endl;
+		m_ui8Comp[0][i] = val;
+	}
+
+	for (int i = 0; i < m_iSize[1]; i++) { // Cb
+		unsigned short origvalue = m_ui16Comp[1][i];
+		unsigned char val = floor(getQuantizedValue_Cb(origvalue) + 0.5);
+		// cout << i << " " << (int)val << endl;
+		m_ui8Comp[1][i] = val;
+	}
+
+	for (int i = 0; i < m_iSize[2]; i++) { // Cr
+		unsigned short origvalue = m_ui16Comp[2][i];
+		unsigned char val = floor(getQuantizedValue_Cr(origvalue) + 0.5);
+		// cout << i << " " << (int)val << endl;
+		m_ui8Comp[2][i] = val;
+	}
+
+	cout << "Done Quantizing. :) " << endl;
+
+	FILE* quantized_image = fopen("./output/RitualDance_960x540_8bit_420_frame100.yuv", "wb");
+	 for (int ch = 0; ch < 1; ch++)
+		fwrite(&(m_ui8Comp[ch][0]), sizeof(unsigned char), m_iSize[ch], quantized_image); // 양자화된 8-bit image를 .yuv 포맷 파일로 저장
+
+	fclose(quantized_image);
+
+
+
+
+	return 0;
 
 } // end of main
