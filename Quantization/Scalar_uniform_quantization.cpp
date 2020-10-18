@@ -37,7 +37,7 @@ int main()
 
 	for (int i = 0; i < 3; i++) {
 		for (int ch = 0; ch < m_iSize[i]; ch++) {
-			m_ui8Comp[i][ch] = (unsigned char)(m_ui16Comp[0][ch] >> 2); // 10-bit input image의 Y, Cb, Cr 성분 단위로 8-bit로 양자화 수행
+			m_ui8Comp[i][ch] = (unsigned char)(m_ui16Comp[i][ch] >> 2); // 10-bit input image의 Y, Cb, Cr 성분 단위로 8-bit로 양자화 수행
 		}
 	}
 
@@ -55,7 +55,7 @@ int main()
 
 	for (int i = 0; i < 3; i++) {
 		for (int ch = 0; ch < m_iSize[i]; ch++) {
-			m_ui16Comp2[i][ch] = (unsigned short)(m_ui8Comp[0][ch] << 2); // 8-bit quantized image의 Y, Cb, Cr 성분 각각 역양자화를 수행하여 reconstruction image 복원
+			m_ui16Comp2[i][ch] = (unsigned short)(m_ui8Comp[][ch] << 2); // 8-bit quantized image의 Y, Cb, Cr 성분 각각 역양자화를 수행하여 reconstruction image 복원
 		}
 	}
 
