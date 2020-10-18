@@ -1,71 +1,173 @@
 // Scalar non-uniform quantization
 #include "lloyd.h"
 
-namespace SQ { // 8비트 스칼라 분균일 양자화기
+namespace SQ_Y { // Y채널 스칼라 분균일 양자화기
 	float *D;
 	float *R;
-	int L = 256; // 2^8 
+}
+
+namespace SQ_Cb { // Cb채널 스칼라 분균일 양자화기
+	float *D;
+	float *R;
+}
+
+namespace SQ_Cr { // Cr채널 스칼라 분균일 양자화기
+	float *D;
+	float *R;
 }
 
 void initialize() {
-	SQ::D = new float[SQ::L];
-	SQ::R = new float[SQ::L - 1];
-
-	SQ::D[0] = 0;
-	SQ::D[SQ::L] = 1024;
-
 	int interval_size = 4;
-	for (int i = 0; i < SQ::L; i++) {
-		SQ::R[i] = (i + 0.5)*interval_size; 
+
+	// Y
+	SQ_Y::D = new float[L];
+	SQ_Y::R = new float[L - 1];
+
+	SQ_Y::D[0] = 0;
+	SQ_Y::D[L] = 1024;
+
+	for (int i = 0; i < L; i++) {
+		SQ_Y::R[i] = (i + 0.5)*interval_size;
+	}
+
+	// Cb
+	SQ_Cb::D = new float[L];
+	SQ_Cb::R = new float[L - 1];
+
+	SQ_Cb::D[0] = 0;
+	SQ_Cb::D[L] = 1024;
+
+	for (int i = 0; i < L; i++) {
+		SQ_Cb::R[i] = (i + 0.5)*interval_size;
+	}
+
+	// Cr
+	SQ_Cr::D = new float[L];
+	SQ_Cr::R = new float[L - 1];
+
+	SQ_Cr::D[0] = 0;
+	SQ_Cr::D[L] = 1024;
+
+	for (int i = 0; i < L; i++) {
+		SQ_Cr::R[i] = (i + 0.5)*interval_size;
 	}
 }
 
 void calculateIntervals() {
-	for (int i = 1; i < SQ::L; i++) {
-		SQ::D[i] = (SQ::R[i] + SQ::R[i - 1]) / 2;
+	for (int i = 1; i < L; i++) { // Y
+		SQ_Y::D[i] = (SQ_Y::R[i] + SQ_Y::R[i - 1]) / 2;
+	}
+
+	for (int i = 1; i < L; i++) { // Cb
+		SQ_Cb::D[i] = (SQ_Cb::R[i] + SQ_Cb::R[i - 1]) / 2;
+	}
+
+	for (int i = 1; i < L; i++) { // Cr
+		SQ_Cr::D[i] = (SQ_Cr::R[i] + SQ_Cr::R[i - 1]) / 2;
 	}
 }
 
-void getNewLevels(unsigned short *P) {
+void getNewLevels(unsigned short **P) {
 	long int num, den;
 	int lower, higher;
 
-	for (int i = 0; i < SQ::L; i++) {
-		// upper range for lower
-		lower = ceilf(SQ::D[i]);
-		// If last value then include it in higher
-		if (i == SQ::L - 1)
-			higher = ceilf(SQ::D[i + 1]);
+	for (int i = 0; i < L; i++) { // Y
+		lower = ceilf(SQ_Y::D[i]);
+		if (i == L - 1)
+			higher = ceilf(SQ_Y::D[i + 1]);
 		else
-			higher = floorf(SQ::D[i + 1]);
-		//		cout << i << " " << SQ::D[i] <<" "<< SQ::D[i+1] << endl;
-		//		cout << "Lower: " << lower << endl;
-		//		cout << "Higher: " << higher << endl;
+			higher = floorf(SQ_Y::D[i + 1]);
+		// cout << i << " " << SQ_Y::D[i] <<" "<< SQ_Y::D[i+1] << endl;
+		// cout << "Lower: " << lower << endl;
+		// cout << "Higher: " << higher << endl;
 		num = 0, den = 0;
 		for (int j = lower; j <= higher; j++) {
-			num += j * P[j];
-			den += P[j];
+			num += j * P[0][j];
+			den += P[0][j];
 		}
 		if (den != 0) {
-			SQ::R[i] = (float)num / den; // i 구간 내 모든 샘플의 평균
+			SQ_Y::R[i] = (float)num / den; // i 구간 내 모든 샘플의 평균
+		}
+	}
+
+	for (int i = 0; i < L; i++) { // Cb
+		lower = ceilf(SQ_Cb::D[i]);
+		if (i == L - 1)
+			higher = ceilf(SQ_Cb::D[i + 1]);
+		else
+			higher = floorf(SQ_Cb::D[i + 1]);
+		// cout << i << " " << SQ_Cb::D[i] <<" "<< SQ_Cb::D[i+1] << endl;
+		// cout << "Lower: " << lower << endl;
+		// cout << "Higher: " << higher << endl;
+		num = 0, den = 0;
+		for (int j = lower; j <= higher; j++) {
+			num += j * P[1][j];
+			den += P[1][j];
+		}
+		if (den != 0) {
+			SQ_Cb::R[i] = (float)num / den; // i 구간 내 모든 샘플의 평균
+		}
+	}
+
+	for (int i = 0; i < L; i++) { // Cr
+		lower = ceilf(SQ_Cr::D[i]);
+		if (i == L - 1)
+			higher = ceilf(SQ_Cr::D[i + 1]);
+		else
+			higher = floorf(SQ_Cr::D[i + 1]);
+		// cout << i << " " << SQ_Cr::D[i] <<" "<< SQ_Cr::D[i+1] << endl;
+		// cout << "Lower: " << lower << endl;
+		// cout << "Higher: " << higher << endl;
+		num = 0, den = 0;
+		for (int j = lower; j <= higher; j++) {
+			num += j * P[2][j];
+			den += P[2][j];
+		}
+		if (den != 0) {
+			SQ_Cr::R[i] = (float)num / den; // i 구간 내 모든 샘플의 평균
 		}
 	}
 }
 
 void printD() {
-	cout << "Values of the intervals (D) are : " << endl;
-	for (int i = 0; i < SQ::L + 1; i++) {
-		cout << SQ::D[i] << " ";
+	cout << "[Y] Values of the intervals (D) are : " << endl; // Y
+	for (int i = 0; i < L + 1; i++) {
+		cout << SQ_Y::D[i] << " ";
+	}
+	cout << endl << endl;
+
+	cout << "[Cb] Values of the intervals (D) are : " << endl; // Cb
+	for (int i = 0; i < L + 1; i++) {
+		cout << SQ_Cb::D[i] << " ";
+	}
+	cout << endl << endl;
+
+	cout << "[Cr] Values of the intervals (D) are : " << endl; // Cr
+	for (int i = 0; i < L + 1; i++) {
+		cout << SQ_Cr::D[i] << " ";
 	}
 	cout << endl << endl;
 }
 
 void printR() {
-	cout << "Values of the centroid (R) are : " << endl;
-	for (int i = 0; i < SQ::L; i++) {
-		cout << SQ::R[i] << " ";
+	cout << "[Y] Values of the centroid (R) are : " << endl; // Y
+	for (int i = 0; i < L; i++) {
+		cout << SQ_Y::R[i] << " ";
 	}
 	cout << endl << endl;
+
+	cout << "[Cb] Values of the centroid (R) are : " << endl; // Cb
+	for (int i = 0; i < L; i++) {
+		cout << SQ_Cb::R[i] << " ";
+	}
+	cout << endl << endl;
+
+	cout << "[Cr] Values of the centroid (R) are : " << endl; // Cr
+	for (int i = 0; i < L; i++) {
+		cout << SQ_Cr::R[i] << " ";
+	}
+	cout << endl << endl;
+
 }
 
 float getQuantizationError(float previousMSE, float currentMSE) {
@@ -105,10 +207,10 @@ float getQuantizationError(float previousMSE, float currentMSE) {
 //	//Check if it is the MAx Value
 //	if (key == MAX_VAL) {
 //		//Last position value  of SQ::R
-//		return SQ::R[SQ::L - 1];
+//		return SQ::R[L - 1];
 //	}
 //	int i;
-//	for (i = 0; i < SQ::L; i++) {
+//	for (i = 0; i < L; i++) {
 //		if (key >= SQ::T[i] && key < SQ::T[i + 1])
 //			break;
 //	}
@@ -122,7 +224,7 @@ int main()
 	FILE *input_image = fopen("./input/RitualDance_960x540_10bit_420_frame100.yuv", "rb");
 
 	if (!input_image) {
-		cout << "file not open" << endl;
+		cout << "Error: file not open" << endl;
 		return 0;
 	}
 
@@ -144,8 +246,6 @@ int main()
 	for (int cnt = 0; cnt < 3; cnt++) {
 		m_ui8Comp[cnt] = new unsigned char[ISIZE];
 	}
-
-
 
 	////////////////////////////////////////////////////////////////////////////
 	float previousMSE, currentMSE, quantization_error = 1;
@@ -171,22 +271,21 @@ int main()
 		}
 	}
 
-	for (int cnt = 0; cnt < 3; cnt++) {
-	for (int i = 0; i < 1024; i++) {
-		cout << i << ": " << P[cnt][i] << "\t\t\t";
-	}
-	cout << endl << endl;
-	 }
+	//for (int cnt = 0; cnt < 3; cnt++) {
+	//	for (int i = 0; i < 1024; i++) {
+	//		cout << i << ": " << P[cnt][i] << "\t\t\t";
+	//	}
+	//	cout << endl << endl;
+	//}
 
 	initialize();
 
 	int iterationNo = 1;
 	calculateIntervals();
-	for (int ch = 0; ch < 3; ch++) {
-		getNewLevels(P[ch]);
-	}
-	//printD();
-	//printR();
+	getNewLevels(P);
+	
+	printD();
+	printR();
 
 	//while (quantization_error > 0.001) { // 양자화 에러가 threshold보다 작아질 때까지 반복적으로 업데이트
 	//	cout << "------------------- Iteration No. " << iterationNo++
@@ -209,5 +308,3 @@ int main()
 
 
 } // end of main
-
-
