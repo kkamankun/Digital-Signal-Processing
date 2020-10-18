@@ -215,14 +215,10 @@ void printR() {
 
 }
 
-float getQuantizationError(float previousMSE, float currentMSE) {
-	return (previousMSE - currentMSE) / currentMSE;
-}
-
 int main()
 {
 	////////// Step 1. YCbCr 10-bit input image를 읽어서 메모리에 저장 //////////
-	FILE *input_image = fopen("./input/RitualDance_960x540_10bit_420_frame100.yuv", "rb");
+	FILE *input_image = fopen("./input/RitualDance_960x540_10bit_420_frame350.yuv", "rb");
 
 	if (!input_image) {
 		cout << "Error: file not open" << endl;
@@ -243,8 +239,6 @@ int main()
 	fclose(input_image);
 
 	////////// Step 2. Input image에 scalar non-uniform quantization //////////
-	float previousMSE, currentMSE, quantization_error = 1;
-
 	unsigned short **P = new unsigned short*[3]; // Counts stored in P
 	for (int cnt = 0; cnt < 3; cnt++) {
 		P[cnt] = new unsigned short[1024];
@@ -265,14 +259,11 @@ int main()
 	calculateIntervals();
 	getNewLevels(P);
 
-	for (int i = 0; i < 10;i++) { // 정해진 횟수를 수행할 때 까지, decision level과 reconstruction level을 반복적으로 업데이트
+	for (int i = 0; i < 10000; i++) { // 정해진 횟수를 수행할 때 까지, decision level과 reconstruction level을 반복적으로 업데이트
 		calculateIntervals();
 		getNewLevels(P);
 	}
 
-
-
-	cout << endl << "----------- Quantizing the file ..." << endl;
 	m_ui8Comp = new unsigned char*[3];
 	for (int ch = 0; ch < 3; ch++) {
 		m_ui8Comp[ch] = new unsigned char[ISIZE];
@@ -300,16 +291,48 @@ int main()
 		m_ui8Comp[2][i] = val;
 	}
 
-	cout << "Done Quantizing. :) " << endl;
-
-	FILE* quantized_image = fopen("./output/RitualDance_960x540_8bit_420_frame100.yuv", "wb");
-	 for (int ch = 0; ch < 1; ch++)
+	FILE* quantized_image = fopen("./output/RitualDance_960x540_8bit_420_frame350.yuv", "wb");
+	for (int ch = 0; ch < 3; ch++)
 		fwrite(&(m_ui8Comp[ch][0]), sizeof(unsigned char), m_iSize[ch], quantized_image); // 양자화된 8-bit image를 .yuv 포맷 파일로 저장
 
 	fclose(quantized_image);
 
+	////////// Step 3. Quantized image에 역양자화 수행 //////////
+	m_ui16Comp2 = new unsigned short*[3];
+	for (int cnt = 0; cnt < 3; cnt++) {
+		m_ui16Comp2[cnt] = new unsigned short[ISIZE];
+	}
 
+	for (int ch = 0; ch < 3; ch++) {
+		for (int i = 0; i < m_iSize[ch]; i++) {
+			m_ui16Comp2[ch][i] = (unsigned short)(m_ui8Comp[ch][i] << 2); // 8-bit quantized image의 Y, Cb, Cr 성분 각각 역양자화를 수행하여 reconstruction image 복원
+		}
+	}
 
+	////////// Step 4. Reconstructed image와 Input image 간 PSNR 측정 //////////
+	int N = ISIZE;
+	int error;
+	double mse, sum = 0;
+	double psnr[3];
+
+	for (int i = 0; i < 3; i++) { // Y, Cb, Cr의 PSNR을 각각 측정
+		for (int ch = 0; ch < m_iSize[i]; ch++) {
+			error = m_ui16Comp[i][ch] - m_ui16Comp2[i][ch];
+			sum += error * error;
+		}
+		mse = sum / N;
+		psnr[i] = 20 * log10(1023 / sqrt(mse));
+	}
+
+	cout << "Y의 PSNR은 " << psnr[0] << "입니다." << endl;
+	cout << "Cb의 PSNR은 " << psnr[1] << "입니다." << endl;
+	cout << "Cr의 PSNR은 " << psnr[2] << "입니다." << endl;
+
+	//FILE* reconstructed_image = fopen("./output/RitualDance_960x540_10bit_420_frame100.yuv", "wb");
+	//for (int ch = 0; ch < 3; ch++)
+	//	fwrite(&(m_ui16Comp2[ch][0]), sizeof(unsigned short), m_iSize[ch], reconstructed_image); // 역양자화된 10-bit image를 .yuv 포맷 파일로 저장
+
+	//fclose(quantized_image);
 
 	return 0;
 
