@@ -14,6 +14,7 @@ unsigned short ** m_ui16Comp2; // Reconstructed image
 unsigned char **m_ui8Comp; // Quantized image
 
 int m_iSize[3] = { ISIZE, ISIZE / 4, ISIZE / 4 }; // YCbCr420 format
+unsigned char code[256]; // 8-bit code
 
 void initialize(); // This function uniformly divides the total range into the number of levels
 void calculateIntervals(); // Calculate the interval/range values D = (R[i] + R[i - 1]) / 2
