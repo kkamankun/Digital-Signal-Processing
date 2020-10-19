@@ -1,4 +1,5 @@
-// Scalar non-uniform quantization
+// 프로젝트명: Scalar non-uniform quantization
+// Description: lloyd max 양자화기 iteration이 끝난 후, 동일한 step에 포함되는 모든 10-bit 인풋샘플들을 하나의 8-bit code로 맵핑
 #include "lloyd.h"
 
 namespace SQ_Y { // Y채널 스칼라 분균일 양자화기
@@ -133,7 +134,7 @@ float getQuantizedValue_Y(unsigned short key) {
 
 	// Y
 	if (key == 1023) { //Check if it is the MAX Value
-		return SQ_Y::R[L - 1]; //Last position value of SQ_Y::R
+		return code[L - 1]; //Last position value of SQ_Y::R
 	}
 	int i;
 	for (i = 0; i < L; i++) {
@@ -141,14 +142,14 @@ float getQuantizedValue_Y(unsigned short key) {
 			break;
 	}
 
-	return SQ_Y::R[i] / 4;
+	return code[i];
 }
 
 float getQuantizedValue_Cb(unsigned short key) {
 
 	// Cb
 	if (key == 1023) { //Check if it is the MAX Value
-		return SQ_Cb::R[L - 1]; //Last position value of SQ_Cb::R
+		return code[L - 1]; //Last position value of SQ_Cb::R
 	}
 	int i;
 	for (i = 0; i < L; i++) {
@@ -156,14 +157,14 @@ float getQuantizedValue_Cb(unsigned short key) {
 			break;
 	}
 
-	return SQ_Cb::R[i] / 4;
+	return code[i];
 }
 
 float getQuantizedValue_Cr(unsigned short key) {
 
 	// Cr
 	if (key == 1023) { //Check if it is the MAX Value
-		return SQ_Cr::R[L - 1]; //Last position value of SQ_Cr::R
+		return code[L - 1]; //Last position value of SQ_Cr::R
 	}
 	int i;
 	for (i = 0; i < L; i++) {
@@ -171,7 +172,7 @@ float getQuantizedValue_Cr(unsigned short key) {
 			break;
 	}
 
-	return SQ_Cr::R[i] / 4;
+	return code[i];
 }
 
 void printD() {
@@ -218,7 +219,7 @@ void printR() {
 int main()
 {
 	////////// Step 1. YCbCr 10-bit input image를 읽어서 메모리에 저장 //////////
-	FILE *input_image = fopen("./input/RitualDance_960x540_10bit_420_frame350.yuv", "rb");
+	FILE *input_image = fopen("./input/RitualDance_960x540_10bit_420_frame100.yuv", "rb");
 
 	if (!input_image) {
 		cout << "Error: file not open" << endl;
@@ -228,6 +229,11 @@ int main()
 	m_ui16Comp = new unsigned short*[3];
 	for (int cnt = 0; cnt < 3; cnt++) {
 		m_ui16Comp[cnt] = new unsigned short[ISIZE];
+	}
+
+	for (int i = 0; i < L; i++) {
+		code[i] = i;
+		// cout << (int)code[i] << endl;
 	}
 
 	int m_iBit = 10;
@@ -291,7 +297,7 @@ int main()
 		m_ui8Comp[2][i] = val;
 	}
 
-	FILE* quantized_image = fopen("./output/RitualDance_960x540_8bit_420_frame350.yuv", "wb");
+	FILE* quantized_image = fopen("./output/RitualDance_960x540_8bit_420_frame100.yuv", "wb");
 	for (int ch = 0; ch < 3; ch++)
 		fwrite(&(m_ui8Comp[ch][0]), sizeof(unsigned char), m_iSize[ch], quantized_image); // 양자화된 8-bit image를 .yuv 포맷 파일로 저장
 
@@ -303,9 +309,27 @@ int main()
 		m_ui16Comp2[cnt] = new unsigned short[ISIZE];
 	}
 
-	for (int ch = 0; ch < 3; ch++) {
-		for (int i = 0; i < m_iSize[ch]; i++) {
-			m_ui16Comp2[ch][i] = (unsigned short)(m_ui8Comp[ch][i] << 2); // 8-bit quantized image의 Y, Cb, Cr 성분 각각 역양자화를 수행하여 reconstruction image 복원
+	for (int j = 0; j < m_iSize[0]; j++) { // 8-bit quantized image의 Y 성분을 역양자화를 수행
+		for (int i = 0; i < L; i++) {
+			if (m_ui8Comp[0][j] == i) {
+				m_ui16Comp2[0][j] = SQ_Y::R[i];
+			}
+		}
+	}
+
+	for (int j = 0; j < m_iSize[1]; j++) { // 8-bit quantized image의 Cb 성분을 역양자화를 수행
+		for (int i = 0; i < L; i++) {
+			if (m_ui8Comp[1][j] == i) {
+				m_ui16Comp2[1][j] = SQ_Cb::R[i];
+			}
+		}
+	}
+
+	for (int j = 0; j < m_iSize[2]; j++) { // 8-bit quantized image의 Cr 성분을 역양자화를 수행
+		for (int i = 0; i < L; i++) {
+			if (m_ui8Comp[2][j] == i) {
+				m_ui16Comp2[2][j] = SQ_Cr::R[i];
+			}
 		}
 	}
 
