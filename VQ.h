@@ -4,6 +4,9 @@
 #define VQ_H_
 #include <iostream>
 #include <vector>
+#include <algorithm>
+#include <vector>
+#include <utility>
 #define ISIZE 540*960
 #define K 256 // 2^8
 
@@ -14,6 +17,8 @@ unsigned short** m_ui16Comp2; // Reconstructed image
 unsigned char** m_ui8Comp; // Quantized image
 
 unsigned short** vec_Y;
+unsigned short** vec_Cb;
+unsigned short** vec_Cr;
 
 int m_iSize[3] = { ISIZE, ISIZE / 4, ISIZE / 4 }; // YCbCr420 format
 unsigned char code[256]; // 8-bit code
