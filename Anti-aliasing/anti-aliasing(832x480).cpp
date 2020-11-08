@@ -1,14 +1,87 @@
 // 832 * 480
 #include "anti-aliasing(832x480).h"
 
+bool convolve2D(unsigned char* in, unsigned char* out, int dataSizeX, int dataSizeY,
+	float* kernel, int kernelSizeX, int kernelSizeY)
+{
+	int i, j, m, n;
+	unsigned char *inPtr, *inPtr2, *outPtr;
+	float *kPtr;
+	int kCenterX, kCenterY;
+	int rowMin, rowMax;                             // to check boundary of input array
+	int colMin, colMax;                             //
+	float sum;                                      // temp accumulation buffer
+
+	// check validity of params
+	if (!in || !out || !kernel) return false;
+	if (dataSizeX <= 0 || kernelSizeX <= 0) return false;
+
+	// find center position of kernel (half of kernel size)
+	kCenterX = kernelSizeX >> 1;
+	kCenterY = kernelSizeY >> 1;
+
+	// init working  pointers
+	inPtr = inPtr2 = &in[dataSizeX * kCenterY + kCenterX];  // note that  it is shifted (kCenterX, kCenterY),
+	outPtr = out;
+	kPtr = kernel;
+
+	// start convolution
+	for (i = 0; i < dataSizeY; ++i)                   // number of rows
+	{
+		// compute the range of convolution, the current row of kernel should be between these
+		rowMax = i + kCenterY;
+		rowMin = i - dataSizeY + kCenterY;
+
+		for (j = 0; j < dataSizeX; ++j)              // number of columns
+		{
+			// compute the range of convolution, the current column of kernel should be between these
+			colMax = j + kCenterX;
+			colMin = j - dataSizeX + kCenterX;
+
+			sum = 0;                                // set to 0 before accumulate
+
+			// flip the kernel and traverse all the kernel values
+			// multiply each kernel value with underlying input data
+			for (m = 0; m < kernelSizeY; ++m)        // kernel rows
+			{
+				// check if the index is out of bound of input array
+				if (m <= rowMax && m > rowMin)
+				{
+					for (n = 0; n < kernelSizeX; ++n)
+					{
+						// check the boundary of array
+						if (n <= colMax && n > colMin)
+							sum += *(inPtr - n) * *kPtr;
+
+						++kPtr;                     // next kernel
+					}
+				}
+				else
+					kPtr += kernelSizeX;            // out of bound, move to next row of kernel
+
+				inPtr -= dataSizeX;                 // move input data 1 raw up
+			}
+
+			// convert negative number to positive
+			*outPtr = (unsigned char)((float)fabs(sum) + 0.5f);
+
+			kPtr = kernel;                          // reset kernel to (0,0)
+			inPtr = ++inPtr2;                       // next input
+			++outPtr;                               // next output
+		}
+	}
+
+	return true;
+}
+
 void print_pixels(int ch) {
-	cout << "ÇÈ¼¿°ª Ãâ·Â Å×½ºÆ®: " << endl;
+	cout << "í”½ì…€ê°’ ì¶œë ¥ í…ŒìŠ¤íŠ¸: " << endl;
 	for (int i = 0; i < m_iSize[ch] / 4; i++)
 		cout << (int)m_ui8Comp2[ch][i] << "\t";
 }
 
 void print_pixels2(unsigned char(*ch)[HEIGHT / 2]) {
-	cout << "ÇÈ¼¿°ª Ãâ·Â Å×½ºÆ®: " << endl;
+	cout << "í”½ì…€ê°’ ì¶œë ¥ í…ŒìŠ¤íŠ¸: " << endl;
 	for (int i = 0; i < HEIGHT / 2; i++) {
 		for (int j = 0; j < WIDTH / 2; j++)
 			cout << (int)ch[i][j] << "\t";
@@ -16,83 +89,16 @@ void print_pixels2(unsigned char(*ch)[HEIGHT / 2]) {
 	}
 }
 
-int main(void) {
-
-	////////// Step 1. YCbCr 10-bit input image¸¦ ÀÐ¾î¼­ ¸Þ¸ð¸®¿¡ ÀúÀå //////////
-	m_ui8Comp1 = new unsigned char*[3];
-	for (int ch = 0; ch < 3; ch++)
-		m_ui8Comp1[ch] = new unsigned char[ISIZE]; // ¹è¿­ ¼±¾ð
-
-	FILE *original_image = fopen("./TestImage_832x480_yuv420_8bit/BasketballDrill_832x480_yuv420_8bit_frame360.yuv", "rb");
-	if (!original_image) {
-		cout << "original_image not open" << endl;
-		return 0;
-	}
-
-	for (int ch = 0; ch < 3; ch++)
-		fread(&(m_ui8Comp1[ch][0]), sizeof(unsigned char), m_iSize[ch], original_image); // original imageÀÇ ÇÈ¼¿°ªÀ» ¹è¿­¿¡ ÀúÀå
-
-	fclose(original_image);
-
-	////////// Step 2. ÀÌ¹ÌÁö downsampling //////////
-	m_ui8Comp2 = new unsigned char*[3];
-	for (int ch = 0; ch < 3; ch++)
-		m_ui8Comp2[ch] = new unsigned char[ISIZE / 4]; // ¹è¿­ ¼±¾ð
-
-	for (int ch = 0; ch < 3; ch++)
-		for (int i = 0; i < m_iSize[ch] / 4; i++)
-			m_ui8Comp2[ch][i] = m_ui8Comp1[ch][WIDTH * (i / (WIDTH / 2)) + (2 * i)];
-
-	FILE* downsample_image_w = fopen("./downsample/BasketballDrill_416x240_yuv420_8bit_frame360.yuv", "wb");
-	if (!downsample_image_w) {
-		cout << "downsample_image not open" << endl;
-		return 0;
-	}
-	for (int ch = 0; ch < 3; ch++)
-		fwrite(&(m_ui8Comp2[ch][0]), sizeof(unsigned char), m_iSize[ch] / 4, downsample_image_w); // downsampleµÈ 8-bit image¸¦ .yuv Æ÷¸Ë ÆÄÀÏ·Î ÀúÀå
-	fclose(downsample_image_w);
-
-	//////////// Step 3. ÀÌ¹ÌÁö upsampling //////////
-	FILE* downsample_image_r = fopen("./downsample/BasketballDrill_416x240_yuv420_8bit_frame360.yuv", "rb"); // downsampleµÈ 8-bit imageÀÇ ÇÈ¼¿°ªÀ» ¹è¿­¿¡ ÀúÀå
-	if (!downsample_image_r) {
-		cout << "downsample_image not open" << endl;
-		return 0;
-	}
-	unsigned char tmpY[HEIGHT / 2][WIDTH / 2];
-	unsigned char tmpCb[HEIGHT / 4][WIDTH / 4];
-	unsigned char tmpCr[HEIGHT / 4][WIDTH / 4];
-	fread(tmpY, sizeof(unsigned char), WIDTH / 2 * HEIGHT / 2, downsample_image_r);
-	fread(tmpCb, sizeof(unsigned char), WIDTH / 4 * HEIGHT / 4, downsample_image_r);
-	fread(tmpCr, sizeof(unsigned char), WIDTH / 4 * HEIGHT / 4, downsample_image_r);
-	fclose(downsample_image_r);
-
-	unsigned char Y[HEIGHT][WIDTH];
-	unsigned char Cb[HEIGHT / 2][WIDTH / 2];
-	unsigned char Cr[HEIGHT / 2][WIDTH / 2];
-	memset(Y, 0, sizeof(unsigned char) * HEIGHT * WIDTH);
-	memset(Cb, 0, sizeof(unsigned char) * HEIGHT / 2 * WIDTH / 2);
-	memset(Cr, 0, sizeof(unsigned char) * HEIGHT / 2 * WIDTH / 2);
-
-	for (int i = 0; i < HEIGHT / 2; i++) // integer-pel sample (Y)
-		for (int j = 0; j < WIDTH / 2; j++)
-			Y[i * 2][j * 2] = tmpY[i][j];
-
-	for (int i = 0; i < HEIGHT / 4; i++) // integer-pel sample (Cb)
-		for (int j = 0; j < WIDTH / 4; j++)
-			Cb[i * 2][j * 2] = tmpCb[i][j];
-
-	for (int i = 0; i < HEIGHT / 4; i++) // integer-pel sample (Cr)
-		for (int j = 0; j < WIDTH / 4; j++)
-			Cr[i * 2][j * 2] = tmpCr[i][j];
-
+void six_tap()
+{
 	for (int k = 0; k < HEIGHT - 10; k += 2) { // Y
 		for (int j = 0; j < WIDTH - 10; j += 2) {
-			for (int i = 0; i <= 10; i += 2) { // ¼öÁ÷¹æÇâ (half-pel)
+			for (int i = 0; i <= 10; i += 2) { // ìˆ˜ì§ë°©í–¥ (half-pel)
 				Y[k + i][j + 5] = ((11 * Y[k + i][j]) - (43 * Y[k + i][j + 2]) + (160 * Y[k + i][j + 4])
 					+ (160 * Y[k + i][j + 6]) - (43 * Y[k + i][j + 8]) + (11 * Y[k + i][j + 10])) / 256;
 			}
 
-			for (int i = 0; i <= 10; i += 2) { // ¼öÆò¹æÇâ (half-pel)
+			for (int i = 0; i <= 10; i += 2) { // ìˆ˜í‰ë°©í–¥ (half-pel)
 				Y[k + 5][j + i] = ((11 * Y[k][j + i]) - (43 * Y[k + 2][j + i]) + (160 * Y[k + 4][j + i])
 					+ (160 * Y[k + 6][j + i]) - (43 * Y[k + 8][j + i]) + (11 * Y[k + 10][j + i])) / 256;
 			}
@@ -104,12 +110,12 @@ int main(void) {
 
 	for (int k = 0; k < HEIGHT / 2 - 10; k += 2) { // Cb
 		for (int j = 0; j < WIDTH / 2 - 10; j += 2) {
-			for (int i = 0; i <= 10; i += 2) { // ¼öÁ÷¹æÇâ (half-pel)
+			for (int i = 0; i <= 10; i += 2) { // ìˆ˜ì§ë°©í–¥ (half-pel)
 				Cb[k + i][j + 5] = ((11 * Cb[k + i][j]) - (43 * Cb[k + i][j + 2]) + (160 * Cb[k + i][j + 4])
 					+ (160 * Cb[k + i][j + 6]) - (43 * Cb[k + i][j + 8]) + (11 * Cb[k + i][j + 10])) / 256;
 			}
 
-			for (int i = 0; i <= 10; i += 2) { // ¼öÆò¹æÇâ (half-pel)
+			for (int i = 0; i <= 10; i += 2) { // ìˆ˜í‰ë°©í–¥ (half-pel)
 				Cb[k + 5][j + i] = ((11 * Cb[k][j + i]) - (43 * Cb[k + 2][j + i]) + (160 * Cb[k + 4][j + i])
 					+ (160 * Cb[k + 6][j + i]) - (43 * Cb[k + 8][j + i]) + (11 * Cb[k + 10][j + i])) / 256;
 			}
@@ -121,12 +127,12 @@ int main(void) {
 
 	for (int k = 0; k < HEIGHT / 2 - 10; k += 2) {
 		for (int j = 0; j < WIDTH / 2 - 10; j += 2) {
-			for (int i = 0; i <= 10; i += 2) { // ¼öÁ÷¹æÇâ (half-pel)
+			for (int i = 0; i <= 10; i += 2) { // ìˆ˜ì§ë°©í–¥ (half-pel)
 				Cr[k + i][j + 5] = ((11 * Cr[k + i][j]) - (43 * Cr[k + i][j + 2]) + (160 * Cr[k + i][j + 4])
 					+ (160 * Cr[k + i][j + 6]) - (43 * Cr[k + i][j + 8]) + (11 * Cr[k + i][j + 10])) / 256;
 			}
 
-			for (int i = 0; i <= 10; i += 2) { // ¼öÆò¹æÇâ (half-pel)
+			for (int i = 0; i <= 10; i += 2) { // ìˆ˜í‰ë°©í–¥ (half-pel)
 				Cr[k + 5][j + i] = ((11 * Cr[k][j + i]) - (43 * Cr[k + 2][j + i]) + (160 * Cr[k + 4][j + i])
 					+ (160 * Cr[k + 6][j + i]) - (43 * Cr[k + 8][j + i]) + (11 * Cr[k + 10][j + i])) / 256;
 			}
@@ -136,7 +142,7 @@ int main(void) {
 		}
 	}
 
-	// º¸°£µÇÁö ¾ÊÀº ¿Ü°¢ Ã¤¿ì±â
+	// ë³´ê°„ë˜ì§€ ì•Šì€ ì™¸ê° ì±„ìš°ê¸°
 	for (int i = 0; i < WIDTH; i += 2) {
 		Y[1][i] = ((128 * Y[0][i]) + (160 * Y[2][i]) - (43 * Y[4][i]) + (11 * Y[6][i])) / 256;
 		Y[3][i] = ((-(43 * Y[0][i])) + (171 * Y[2][i]) + (160 * Y[4][i]) - (43 * Y[6][i]) + (11 * Y[8][i])) / 256;
@@ -219,8 +225,96 @@ int main(void) {
 
 	for (int i = 0; i < WIDTH / 2; i++)
 		Cr[HEIGHT / 2 - 1][i] = (288 * Cr[HEIGHT / 2 - 2][i] - 43 * Cr[HEIGHT / 2 - 4][i] + 11 * Cr[HEIGHT / 2 - 8][i]) / 256;
+}
 
-	FILE* reconstructed_image_w = fopen("./upsample/BasketballDrill_832x480_yuv420_8bit_frame360.yuv", "wb"); // upsampleµÈ 8-bit image¸¦ .yuv Æ÷¸Ë ÆÄÀÏ·Î ÀúÀå
+int main(void) {
+	////////// Step 1. YCbCr 10-bit input imageë¥¼ ì½ì–´ì„œ ë©”ëª¨ë¦¬ì— ì €ìž¥ //////////
+	m_ui8Comp1 = new unsigned char*[3];
+	for (int ch = 0; ch < 3; ch++)
+		m_ui8Comp1[ch] = new unsigned char[ISIZE]; // ë°°ì—´ ì„ ì–¸
+
+	FILE *original_image = fopen(ori_path, "rb");
+	if (!original_image) {
+		cout << "original_image not open" << endl;
+		return 0;
+	}
+
+	for (int ch = 0; ch < 3; ch++)
+		fread(&(m_ui8Comp1[ch][0]), sizeof(unsigned char), m_iSize[ch], original_image); // original imageì˜ í”½ì…€ê°’ì„ ë°°ì—´ì— ì €ìž¥
+
+	fclose(original_image);
+
+	int n;
+	cout << "Anti-Aliasing filterë¥¼ ì ìš©í• ê¹Œìš”?:" << endl << "1. Yes" << endl << "2. No" << endl;
+	cin >> n;
+	if (n == 1) {
+		m_ui8Comp4 = new unsigned char*[3];
+		for (int ch = 0; ch < 3; ch++)
+			m_ui8Comp4[ch] = new unsigned char[ISIZE]; // ë°°ì—´ ì„ ì–¸
+
+		convolve2D(m_ui8Comp1[0], m_ui8Comp4[0], WIDTH, HEIGHT, kernel, 5, 5);
+		convolve2D(m_ui8Comp1[1], m_ui8Comp4[1], WIDTH / 2, HEIGHT / 2, kernel, 5, 5);
+		convolve2D(m_ui8Comp1[2], m_ui8Comp4[2], WIDTH / 2, HEIGHT / 2, kernel, 5, 5);
+
+		for (int ch = 0; ch < 3; ch++)
+			for (int i = 0; i < m_iSize[ch]; i++)
+				m_ui8Comp1[ch][i] = m_ui8Comp4[ch][i];
+
+		strcpy(down_path, "./downsample/anti-aliasing(o)/BasketballDrill_416x240_yuv420_8bit_frame360.yuv");
+		strcpy(recon_path, "./upsample/anti-aliasing(o)/BasketballDrill_832x480_yuv420_8bit_frame360.yuv");
+	}
+
+	////////// Step 2. ì´ë¯¸ì§€ downsampling //////////
+	m_ui8Comp2 = new unsigned char*[3];
+	for (int ch = 0; ch < 3; ch++)
+		m_ui8Comp2[ch] = new unsigned char[ISIZE / 4]; // ë°°ì—´ ì„ ì–¸
+
+	for (int ch = 0; ch < 3; ch++)
+		for (int i = 0; i < m_iSize[ch] / 4; i++)
+			m_ui8Comp2[ch][i] = m_ui8Comp1[ch][WIDTH * (i / (WIDTH / 2)) + (2 * i)];
+
+	FILE* downsample_image_w = fopen(down_path, "wb");
+	if (!downsample_image_w) {
+		cout << "downsample_image not open" << endl;
+		return 0;
+	}
+	for (int ch = 0; ch < 3; ch++)
+		fwrite(&(m_ui8Comp2[ch][0]), sizeof(unsigned char), m_iSize[ch] / 4, downsample_image_w); // downsampleëœ 8-bit imageë¥¼ .yuv í¬ë§· íŒŒì¼ë¡œ ì €ìž¥
+	fclose(downsample_image_w);
+
+	//////////// Step 3. ì´ë¯¸ì§€ upsampling //////////
+	FILE* downsample_image_r = fopen(down_path, "rb"); // downsampleëœ 8-bit imageì˜ í”½ì…€ê°’ì„ ë°°ì—´ì— ì €ìž¥
+	if (!downsample_image_r) {
+		cout << "downsample_image not open" << endl;
+		return 0;
+	}
+	unsigned char tmpY[HEIGHT / 2][WIDTH / 2];
+	unsigned char tmpCb[HEIGHT / 4][WIDTH / 4];
+	unsigned char tmpCr[HEIGHT / 4][WIDTH / 4];
+	fread(tmpY, sizeof(unsigned char), WIDTH / 2 * HEIGHT / 2, downsample_image_r);
+	fread(tmpCb, sizeof(unsigned char), WIDTH / 4 * HEIGHT / 4, downsample_image_r);
+	fread(tmpCr, sizeof(unsigned char), WIDTH / 4 * HEIGHT / 4, downsample_image_r);
+	fclose(downsample_image_r);
+
+	memset(Y, 0, sizeof(unsigned char) * HEIGHT * WIDTH);
+	memset(Cb, 0, sizeof(unsigned char) * HEIGHT / 2 * WIDTH / 2);
+	memset(Cr, 0, sizeof(unsigned char) * HEIGHT / 2 * WIDTH / 2);
+
+	for (int i = 0; i < HEIGHT / 2; i++) // integer-pel sample (Y)
+		for (int j = 0; j < WIDTH / 2; j++)
+			Y[i * 2][j * 2] = tmpY[i][j];
+
+	for (int i = 0; i < HEIGHT / 4; i++) // integer-pel sample (Cb)
+		for (int j = 0; j < WIDTH / 4; j++)
+			Cb[i * 2][j * 2] = tmpCb[i][j];
+
+	for (int i = 0; i < HEIGHT / 4; i++) // integer-pel sample (Cr)
+		for (int j = 0; j < WIDTH / 4; j++)
+			Cr[i * 2][j * 2] = tmpCr[i][j];
+
+	six_tap();
+
+	FILE* reconstructed_image_w = fopen(recon_path, "wb"); // upsampleëœ 8-bit imageë¥¼ .yuv í¬ë§· íŒŒì¼ë¡œ ì €ìž¥
 	if (!reconstructed_image_w) {
 		cout << "upsample_image not open" << endl;
 		return 0;
@@ -231,18 +325,18 @@ int main(void) {
 	fwrite(Cr, sizeof(unsigned char), HEIGHT / 2 * WIDTH / 2, reconstructed_image_w);
 	fclose(reconstructed_image_w);
 
-	////////// Step 4. Reconstructed image¿Í Original image °£ PSNR ÃøÁ¤ //////////
+	////////// Step 4. Reconstructed imageì™€ Original image ê°„ PSNR ì¸¡ì • //////////
 	m_ui8Comp3 = new unsigned char*[3];
 	for (int ch = 0; ch < 3; ch++)
-		m_ui8Comp3[ch] = new unsigned char[ISIZE]; // ¹è¿­ ¼±¾ð
+		m_ui8Comp3[ch] = new unsigned char[ISIZE]; // ë°°ì—´ ì„ ì–¸
 
-	FILE* reconstructed_image_r = fopen("./upsample/BasketballDrill_832x480_yuv420_8bit_frame360.yuv", "rb");
+	FILE* reconstructed_image_r = fopen(recon_path, "rb");
 	if (!reconstructed_image_r) {
 		cout << "reconstruced_image not open" << endl;
 		return 0;
 	}
 	for (int ch = 0; ch < 3; ch++)
-		fread(&(m_ui8Comp3[ch][0]), sizeof(unsigned char), m_iSize[ch], reconstructed_image_r); // upsampleµÈ 8-bit imageÀÇ ÇÈ¼¿°ªÀ» ¹è¿­¿¡ ÀúÀå
+		fread(&(m_ui8Comp3[ch][0]), sizeof(unsigned char), m_iSize[ch], reconstructed_image_r); // upsampleëœ 8-bit imageì˜ í”½ì…€ê°’ì„ ë°°ì—´ì— ì €ìž¥
 	fclose(reconstructed_image_r);
 
 	int N = ISIZE;
@@ -251,7 +345,7 @@ int main(void) {
 	double mse, sum = 0;
 	double psnr[3];
 
-	for (int i = 0; i < 3; i++) { // Y, Cb, CrÀÇ PSNRÀ» °¢°¢ ÃøÁ¤
+	for (int i = 0; i < 3; i++) { // Y, Cb, Crì˜ PSNRì„ ê°ê° ì¸¡ì •
 		for (int ch = 0; ch < m_iSize[i]; ch++) {
 			error = m_ui8Comp1[i][ch] - m_ui8Comp3[i][ch];
 			sum += error * error;
@@ -260,12 +354,9 @@ int main(void) {
 		psnr[i] = 20 * log10(MAX / sqrt(mse));
 	}
 
-	cout << "YÀÇ PSNRÀº " << psnr[0] << "ÀÔ´Ï´Ù." << endl;
-	cout << "CbÀÇ PSNRÀº " << psnr[1] << "ÀÔ´Ï´Ù." << endl;
-	cout << "CrÀÇ PSNRÀº " << psnr[2] << "ÀÔ´Ï´Ù." << endl;
-
-
-
+	cout << "Yì˜ PSNRì€ " << psnr[0] << "ìž…ë‹ˆë‹¤." << endl;
+	cout << "Cbì˜ PSNRì€ " << psnr[1] << "ìž…ë‹ˆë‹¤." << endl;
+	cout << "Crì˜ PSNRì€ " << psnr[2] << "ìž…ë‹ˆë‹¤." << endl;
 
 	return 0;
 } // end of main
