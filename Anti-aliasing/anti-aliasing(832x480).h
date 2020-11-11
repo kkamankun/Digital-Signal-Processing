@@ -29,9 +29,9 @@ float kernel[25] = { 1 / 256.0f,  4 / 256.0f,  6 / 256.0f,  4 / 256.0f, 1 / 256.
 					 4 / 256.0f, 16 / 256.0f, 24 / 256.0f, 16 / 256.0f, 4 / 256.0f,
 					 1 / 256.0f,  4 / 256.0f,  6 / 256.0f,  4 / 256.0f, 1 / 256.0f };
 
-char ori_path[] = "./TestImage_832x480_yuv420_8bit/BasketballDrill_832x480_yuv420_8bit_frame360.yuv";
-char down_path[] = "./downsample/anti-aliasing(x)/BasketballDrill_416x240_yuv420_8bit_frame360.yuv";
-char recon_path[] = "./upsample/anti-aliasing(x)/BasketballDrill_832x480_yuv420_8bit_frame360.yuv";
+char ori_path[] = "./TestImage_832x480_yuv420_8bit/RaceHorsesC_832x480_yuv420_8bit_frame120.yuv";
+char down_path[] = "./downsample/anti-aliasing(x)/RaceHorsesC_416x240_yuv420_8bit_frame120.yuv";
+char recon_path[] = "./upsample/anti-aliasing(x)/RaceHorsesC_832x480_yuv420_8bit_frame120.yuv";
 
 bool convolve2D(unsigned char* in, unsigned char* out, int sizeX, int sizeY, float* kernel, int kSizeX, int kSizeY);
 void six_tap();
