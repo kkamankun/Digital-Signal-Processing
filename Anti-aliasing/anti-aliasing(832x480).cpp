@@ -4,70 +4,42 @@
 bool convolve2D(unsigned char* in, unsigned char* out, int dataSizeX, int dataSizeY,
 	float* kernel, int kernelSizeX, int kernelSizeY)
 {
-	int i, j, m, n;
-	unsigned char *inPtr, *inPtr2, *outPtr;
-	float *kPtr;
-	int kCenterX, kCenterY;
-	int rowMin, rowMax;                             // to check boundary of input array
-	int colMin, colMax;                             //
+	int i, j, m, n, mm, nn;
+	int kCenterX, kCenterY;                         // center index of kernel
 	float sum;                                      // temp accumulation buffer
+	int rowIndex, colIndex;
 
 	// check validity of params
 	if (!in || !out || !kernel) return false;
 	if (dataSizeX <= 0 || kernelSizeX <= 0) return false;
 
 	// find center position of kernel (half of kernel size)
-	kCenterX = kernelSizeX >> 1;
-	kCenterY = kernelSizeY >> 1;
+	kCenterX = kernelSizeX / 2;
+	kCenterY = kernelSizeY / 2;
 
-	// init working  pointers
-	inPtr = inPtr2 = &in[dataSizeX * kCenterY + kCenterX];  // note that  it is shifted (kCenterX, kCenterY),
-	outPtr = out;
-	kPtr = kernel;
-
-	// start convolution
-	for (i = 0; i < dataSizeY; ++i)                   // number of rows
+	for (i = 0; i < dataSizeY; ++i)                // rows
 	{
-		// compute the range of convolution, the current row of kernel should be between these
-		rowMax = i + kCenterY;
-		rowMin = i - dataSizeY + kCenterY;
-
-		for (j = 0; j < dataSizeX; ++j)              // number of columns
+		for (j = 0; j < dataSizeX; ++j)            // columns
 		{
-			// compute the range of convolution, the current column of kernel should be between these
-			colMax = j + kCenterX;
-			colMin = j - dataSizeX + kCenterX;
-
-			sum = 0;                                // set to 0 before accumulate
-
-			// flip the kernel and traverse all the kernel values
-			// multiply each kernel value with underlying input data
-			for (m = 0; m < kernelSizeY; ++m)        // kernel rows
+			sum = 0;                            // init to 0 before sum
+			for (m = 0; m < kernelSizeY; ++m)      // kernel rows
 			{
-				// check if the index is out of bound of input array
-				if (m <= rowMax && m > rowMin)
+				mm = kernelSizeY - 1 - m;       // row index of flipped kernel
+
+				for (n = 0; n < kernelSizeX; ++n)  // kernel columns
 				{
-					for (n = 0; n < kernelSizeX; ++n)
-					{
-						// check the boundary of array
-						if (n <= colMax && n > colMin)
-							sum += *(inPtr - n) * *kPtr;
+					nn = kernelSizeX - 1 - n;   // column index of flipped kernel
 
-						++kPtr;                     // next kernel
-					}
+					// index of input signal, used for checking boundary
+					rowIndex = i + (kCenterY - m);
+					colIndex = j + (kCenterX - n);
+
+					// ignore input samples which are out of bound
+					if (rowIndex >= 0 && rowIndex < dataSizeY && colIndex >= 0 && colIndex < dataSizeX)
+						sum += in[dataSizeX * rowIndex + colIndex] * kernel[kernelSizeX * m + n];
 				}
-				else
-					kPtr += kernelSizeX;            // out of bound, move to next row of kernel
-
-				inPtr -= dataSizeX;                 // move input data 1 raw up
 			}
-
-			// convert negative number to positive
-			*outPtr = (unsigned char)((float)fabs(sum) + 0.5f);
-
-			kPtr = kernel;                          // reset kernel to (0,0)
-			inPtr = ++inPtr2;                       // next input
-			++outPtr;                               // next output
+			out[dataSizeX * i + j] = (unsigned char)((float)fabs(sum) + 0.5f);
 		}
 	}
 
@@ -230,8 +202,9 @@ void six_tap()
 int main(void) {
 	////////// Step 1. YCbCr 10-bit input image를 읽어서 메모리에 저장 //////////
 	m_ui8Comp1 = new unsigned char*[3];
-	for (int ch = 0; ch < 3; ch++)
-		m_ui8Comp1[ch] = new unsigned char[ISIZE]; // 배열 선언
+	m_ui8Comp1[0] = new unsigned char[ISIZE]; // 배열 선언
+	m_ui8Comp1[1] = new unsigned char[ISIZE / 4];
+	m_ui8Comp1[2] = new unsigned char[ISIZE / 4];
 
 	FILE *original_image = fopen(ori_path, "rb");
 	if (!original_image) {
@@ -249,19 +222,30 @@ int main(void) {
 	cin >> n;
 	if (n == 1) {
 		m_ui8Comp4 = new unsigned char*[3];
-		for (int ch = 0; ch < 3; ch++)
-			m_ui8Comp4[ch] = new unsigned char[ISIZE]; // 배열 선언
+		m_ui8Comp4[0] = new unsigned char[ISIZE]; // 배열 선언
+		m_ui8Comp4[1] = new unsigned char[ISIZE / 4];
+		m_ui8Comp4[2] = new unsigned char[ISIZE / 4];
 
 		convolve2D(m_ui8Comp1[0], m_ui8Comp4[0], WIDTH, HEIGHT, kernel, 5, 5);
 		convolve2D(m_ui8Comp1[1], m_ui8Comp4[1], WIDTH / 2, HEIGHT / 2, kernel, 5, 5);
 		convolve2D(m_ui8Comp1[2], m_ui8Comp4[2], WIDTH / 2, HEIGHT / 2, kernel, 5, 5);
 
-		for (int ch = 0; ch < 3; ch++)
-			for (int i = 0; i < m_iSize[ch]; i++)
-				m_ui8Comp1[ch][i] = m_ui8Comp4[ch][i];
+		for (int i = 0; i < m_iSize[0]; i++) {
+			if (i >= WIDTH || i %WIDTH != 0 || i % (WIDTH-1) != 0 || i <= ISIZE-1-WIDTH)
+			m_ui8Comp1[0][i] = m_ui8Comp4[0][i];
+		}
 
-		strcpy(down_path, "./downsample/anti-aliasing(o)/BasketballDrill_416x240_yuv420_8bit_frame360.yuv");
-		strcpy(recon_path, "./upsample/anti-aliasing(o)/BasketballDrill_832x480_yuv420_8bit_frame360.yuv");
+		strcpy(down_path, "./downsample/anti-aliasing(o)/RaceHorsesC_416x240_yuv420_8bit_frame120.yuv");
+		strcpy(recon_path, "./upsample/anti-aliasing(o)/RaceHorsesC_832x480_yuv420_8bit_frame120.yuv");
+
+		//FILE* filtered_image = fopen("./filtered/BasketballDrill_832x480_yuv420_8bit_frame360.yuv", "wb");
+		//if (!filtered_image) {
+		//	cout << "filtered_image not open" << endl;
+		//	return 0;
+		//}
+		//for (int ch = 0; ch < 3; ch++)
+		//	fwrite(&(m_ui8Comp1[ch][0]), sizeof(unsigned char), m_iSize[ch], filtered_image); // 필터링된 8-bit image를 .yuv 포맷 파일로 저장
+		//fclose(filtered_image);
 	}
 
 	////////// Step 2. 이미지 downsampling //////////
@@ -269,9 +253,10 @@ int main(void) {
 	for (int ch = 0; ch < 3; ch++)
 		m_ui8Comp2[ch] = new unsigned char[ISIZE / 4]; // 배열 선언
 
-	for (int ch = 0; ch < 3; ch++)
+	for (int ch = 0; ch < 3; ch++) {
 		for (int i = 0; i < m_iSize[ch] / 4; i++)
-			m_ui8Comp2[ch][i] = m_ui8Comp1[ch][WIDTH * (i / (WIDTH / 2)) + (2 * i)];
+			m_ui8Comp2[ch][i] = m_ui8Comp1[ch][1 + WIDTH * (i / (WIDTH / 2)) + (2 * i)];
+	}
 
 	FILE* downsample_image_w = fopen(down_path, "wb");
 	if (!downsample_image_w) {
