@@ -106,7 +106,7 @@ int main(void)
 		delete[] HH1[ch];
 	delete[] HH1;
 
-	FILE* coefficient1 = fopen("./test/RaceHorsesC_832x480_yuv420_8bit_coefficient1.yuv", "wb");
+	FILE* coefficient1 = fopen(coeffi1_path, "wb");
 	if (!coefficient1) {
 		cout << "coefficient1 not open" << endl;
 		return 0;
@@ -200,7 +200,7 @@ int main(void)
 		delete[] HH2[ch];
 	delete[] HH2;
 
-	FILE* coefficient2 = fopen("./test/RaceHorsesC_832x480_yuv420_8bit_coefficient2.yuv", "wb");
+	FILE* coefficient2 = fopen(coeffi2_path, "wb");
 	if (!coefficient2) {
 		cout << "coefficient2 not open" << endl;
 		return 0;
@@ -294,7 +294,7 @@ int main(void)
 		delete[] HH3[ch];
 	delete[] HH3;
 
-	FILE* coefficient3 = fopen("./test/RaceHorsesC_832x480_yuv420_8bit_coefficient3.yuv", "wb");
+	FILE* coefficient3 = fopen(coeffi3_path, "wb");
 	if (!coefficient3) {
 		cout << "coefficient3 not open" << endl;
 		return 0;
@@ -305,17 +305,7 @@ int main(void)
 	}
 	fclose(coefficient3);
 
-
-	//FILE* test = fopen("./test/RaceHorsesC_832x480_yuv420_8bit_coefficient1.yuv", "wb");
-	//if (!test) {
-	//	cout << "test not open" << endl;
-	//	return 0;
-	//}
-
-	//for (int ch = 0; ch < 3; ch++) {
-	//	fwrite(&(coeffiecient1[ch][0]), sizeof(unsigned char), m_iSize[ch], test);
-	//}
-	//fclose(test);
+	////////// Step 3. Quantization //////////
 
 	return 0;
-}
+} // end of main()
