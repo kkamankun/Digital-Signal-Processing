@@ -20,62 +20,66 @@ int main(void)
 
 	////////// Step 2. haar wavelet transform //////////
 	/* 
-	1단계
+	1단계 변환
 	*/
 
 	/* 수평방향으로 오버랩하지 않은 인접한 두 픽셀에 대하여 low-pass, high-pass filtering 수행 */
-	unsigned char** L1 = new unsigned char*[3];
+	short** L1 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		L1[ch] = new unsigned char[m_iSize[ch] / 2];
+		L1[ch] = new short[m_iSize[ch] / 2];
 
 	for (int ch = 0; ch < 3; ch++)  // low-pass filtering (Horizontal)
 		for (int i = 0; i < m_iSize[ch] / 2; i++)
-			L1[ch][i] = m_ui8Comp0[ch][2 * i] / 2 + m_ui8Comp0[ch][2 * i + 1] / 2;
+			L1[ch][i] = m_ui8Comp0[ch][2 * i] + m_ui8Comp0[ch][2 * i + 1];
 
-	unsigned char** H1 = new unsigned char*[3];
+	short** H1 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		H1[ch] = new unsigned char[m_iSize[ch] / 2];
+		H1[ch] = new short[m_iSize[ch] / 2];
 
 	for (int ch = 0; ch < 3; ch++)  // low-pass filtering (Horizontal)
 		for (int i = 0; i < m_iSize[ch] / 2; i++)
-			H1[ch][i] = m_ui8Comp0[ch][2 * i] / 2 - m_ui8Comp0[ch][2 * i + 1] / 2;
+			H1[ch][i] = m_ui8Comp0[ch][2 * i] - m_ui8Comp0[ch][2 * i + 1];
 
 	/* 수직방향으로 오버랩하지 않은 인접한 두 픽셀에 대하여 low-pass, high-pass filtering 수행 */
-	unsigned char** LL1 = new unsigned char*[3];
+	short** LL1 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		LL1[ch] = new unsigned char[m_iSize[ch] / 4];
+		LL1[ch] = new short[m_iSize[ch] / 4];
 
 	for (int ch = 0; ch < 3; ch++)  // low-pass filtering (Vertical)
-		for (int i = 0; i < m_iSize[ch] / 4; i++)
-			LL1[ch][i] = L1[ch][i] / 2 + L1[ch][WIDTH / 2 + i] / 2;
+		for (int i = 0; i < height[ch] / 2; i++)
+			for (int j = 0; j < width[ch] / 2; j++)
+				LL1[ch][((width[ch] / 2) * i) + j] = L1[ch][((width[ch] / 2) * (2 * i)) + j] + L1[ch][((width[ch] / 2) * (2 * i + 1)) + j];
 
-	unsigned char** LH1 = new unsigned char*[3];
+	short** LH1 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		LH1[ch] = new unsigned char[m_iSize[ch] / 4];
+		LH1[ch] = new short[m_iSize[ch] / 4];
 
 	for (int ch = 0; ch < 3; ch++)  // high-pass filtering (Vertical)
-		for (int i = 0; i < m_iSize[ch] / 4; i++)
-			LH1[ch][i] = L1[ch][i] / 2 - L1[ch][WIDTH / 2 + i] / 2;
+		for (int i = 0; i < height[ch] / 2; i++)
+			for (int j = 0; j < width[ch] / 2; j++)
+				LH1[ch][((width[ch] / 2) * i) + j] = L1[ch][((width[ch] / 2) * (2 * i)) + j] - L1[ch][((width[ch] / 2) * (2 * i + 1)) + j];
 
-	unsigned char** HL1 = new unsigned char*[3];
+	short** HL1 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		HL1[ch] = new unsigned char[m_iSize[ch] / 4];
+		HL1[ch] = new short[m_iSize[ch] / 4];
 
 	for (int ch = 0; ch < 3; ch++)  // low-pass filtering (Vertical)
-		for (int i = 0; i < m_iSize[ch] / 4; i++)
-			HL1[ch][i] = H1[ch][i] / 2 + H1[ch][WIDTH / 2 + i] / 2;
+		for (int i = 0; i < height[ch] / 2; i++)
+			for (int j = 0; j < width[ch] / 2; j++)
+				HL1[ch][((width[ch] / 2) * i) + j] = H1[ch][((width[ch] / 2) * (2 * i)) + j] + H1[ch][((width[ch] / 2) * (2 * i + 1)) + j];
 
-	unsigned char** HH1 = new unsigned char*[3];
+	short** HH1 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		HH1[ch] = new unsigned char[m_iSize[ch] / 4];
+		HH1[ch] = new short[m_iSize[ch] / 4];
 
 	for (int ch = 0; ch < 3; ch++)  // high-pass filtering (Vertical)
-		for (int i = 0; i < m_iSize[ch] / 4; i++)
-			HH1[ch][i] = H1[ch][i] / 2 - H1[ch][WIDTH / 2 + i] / 2;
+		for (int i = 0; i < height[ch] / 2; i++)
+			for (int j = 0; j < width[ch] / 2; j++)
+				HH1[ch][((width[ch] / 2) * i) + j] = H1[ch][((width[ch] / 2) * (2 * i)) + j] + H1[ch][((width[ch] / 2) * (2 * i + 1)) + j];
 
-	coeffiecient = new unsigned char*[3];
+	coeffiecient = new short*[3];
 	for (int i = 0; i < 3; i++)
-		coeffiecient[i] = new unsigned char[m_iSize[i]];
+		coeffiecient[i] = new short[m_iSize[i]];
 
 	for (int ch = 0; ch < 3; ch++)
 		for (int i = 0; i < height[ch] / 2; i++)
@@ -86,26 +90,6 @@ int main(void)
 				coeffiecient[ch][width[ch] * (i + height[ch] / 2) + j + width[ch] / 2] = HH1[ch][(width[ch] / 2) * i + j];
 			}
 
-	for (int ch = 0; ch < 3; ch++)
-		delete[] L1[ch];
-	delete[] L1;
-
-	for (int ch = 0; ch < 3; ch++)
-		delete[] H1[ch];
-	delete[] H1;
-
-	for (int ch = 0; ch < 3; ch++)
-		delete[] HL1[ch];
-	delete[] HL1;
-
-	for (int ch = 0; ch < 3; ch++)
-		delete[] LH1[ch];
-	delete[] LH1;
-
-	for (int ch = 0; ch < 3; ch++)
-		delete[] HH1[ch];
-	delete[] HH1;
-
 	FILE* coefficient1 = fopen(coeffi1_path, "wb");
 	if (!coefficient1) {
 		cout << "coefficient1 not open" << endl;
@@ -113,63 +97,67 @@ int main(void)
 	}
 
 	for (int ch = 0; ch < 3; ch++) {
-		fwrite(&(coeffiecient[ch][0]), sizeof(unsigned char), m_iSize[ch], coefficient1);
+		fwrite(&(coeffiecient[ch][0]), sizeof(short), m_iSize[ch], coefficient1);
 	}
 	fclose(coefficient1);
 
 	/*
-	2단계
+	2단계 변환
 	*/
 
 	/* 수평방향으로 오버랩하지 않은 인접한 두 픽셀에 대하여 low-pass, high-pass filtering 수행 */
-	unsigned char** L2 = new unsigned char*[3];
+	short** L2 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		L2[ch] = new unsigned char[m_iSize[ch] / 8];
+		L2[ch] = new short[m_iSize[ch] / 8];
 
 	for (int ch = 0; ch < 3; ch++)  // low-pass filtering (Horizontal)
 		for (int i = 0; i < m_iSize[ch] / 8; i++)
-			L2[ch][i] = LL1[ch][2 * i] / 2 + LL1[ch][2 * i + 1] / 2;
+			L2[ch][i] = LL1[ch][2 * i] + LL1[ch][2 * i + 1];
 
-	unsigned char** H2 = new unsigned char*[3];
+	short** H2 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		H2[ch] = new unsigned char[m_iSize[ch] / 8];
+		H2[ch] = new short[m_iSize[ch] / 8];
 
 	for (int ch = 0; ch < 3; ch++)  // low-pass filtering (Horizontal)
 		for (int i = 0; i < m_iSize[ch] / 8; i++)
-			H2[ch][i] = LL1[ch][2 * i] / 2 - LL1[ch][2 * i + 1] / 2;
+			H2[ch][i] = LL1[ch][2 * i] - LL1[ch][2 * i + 1];
 
 	/* 수직방향으로 오버랩하지 않은 인접한 두 픽셀에 대하여 low-pass, high-pass filtering 수행 */
-	unsigned char** LL2 = new unsigned char*[3];
+	short** LL2 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		LL2[ch] = new unsigned char[m_iSize[ch] / 16];
+		LL2[ch] = new short[m_iSize[ch] / 16];
 
 	for (int ch = 0; ch < 3; ch++)  // low-pass filtering (Vertical)
-		for (int i = 0; i < m_iSize[ch] / 16; i++)
-			LL2[ch][i] = L2[ch][i] / 2 + L2[ch][WIDTH / 2 + i] / 2;
+		for (int i = 0; i < height[ch] / 4; i++)
+			for (int j = 0; j < width[ch] / 4; j++)
+				LL2[ch][((width[ch] / 4) * i) + j] = L2[ch][((width[ch] / 4) * (2 * i)) + j] + L2[ch][((width[ch] /4) * (2 * i + 1)) + j];
 
-	unsigned char** LH2 = new unsigned char*[3];
+	short** LH2 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		LH2[ch] = new unsigned char[m_iSize[ch] / 16];
+		LH2[ch] = new short[m_iSize[ch] / 16];
 
 	for (int ch = 0; ch < 3; ch++)  // high-pass filtering (Vertical)
-		for (int i = 0; i < m_iSize[ch] / 16; i++)
-			LH2[ch][i] = L2[ch][i] / 2 - L2[ch][WIDTH / 2 + i] / 2;
+		for (int i = 0; i < height[ch] / 4; i++)
+			for (int j = 0; j < width[ch] / 4; j++)
+				LH2[ch][((width[ch] / 4) * i) + j] = L2[ch][((width[ch] / 4) * (2 * i)) + j] - L2[ch][((width[ch] / 4) * (2 * i + 1)) + j];
 
-	unsigned char** HL2 = new unsigned char*[3];
+	short** HL2 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		HL2[ch] = new unsigned char[m_iSize[ch] / 16];
+		HL2[ch] = new short[m_iSize[ch] / 16];
 
 	for (int ch = 0; ch < 3; ch++)  // low-pass filtering (Vertical)
-		for (int i = 0; i < m_iSize[ch] / 16; i++)
-			HL2[ch][i] = H2[ch][i] / 2 + H2[ch][WIDTH / 2 + i] / 2;
+		for (int i = 0; i < height[ch] / 4; i++)
+			for (int j = 0; j < width[ch] / 4; j++)
+				HL2[ch][((width[ch] / 4) * i) + j] = H2[ch][((width[ch] / 4) * (2 * i)) + j] + H2[ch][((width[ch] / 4) * (2 * i + 1)) + j];
 
-	unsigned char** HH2 = new unsigned char*[3];
+	short** HH2 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		HH2[ch] = new unsigned char[m_iSize[ch] / 16];
+		HH2[ch] = new short[m_iSize[ch] / 16];
 
 	for (int ch = 0; ch < 3; ch++)  // high-pass filtering (Vertical)
-		for (int i = 0; i < m_iSize[ch] / 16; i++)
-			HH2[ch][i] = H2[ch][i] / 2 - H2[ch][WIDTH / 2 + i] / 2;
+		for (int i = 0; i < height[ch] / 4; i++)
+			for (int j = 0; j < width[ch] / 4; j++)
+				HH2[ch][((width[ch] / 4) * i) + j] = H2[ch][((width[ch] / 4) * (2 * i)) + j] - H2[ch][((width[ch] / 4) * (2 * i + 1)) + j];
 
 	for (int ch = 0; ch < 3; ch++)
 		for (int i = 0; i < height[ch] / 4; i++)
@@ -180,26 +168,6 @@ int main(void)
 				coeffiecient[ch][width[ch] * (i + height[ch] / 4) + j + width[ch] / 4] = HH2[ch][(width[ch] / 4) * i + j];
 			}
 
-	for (int ch = 0; ch < 3; ch++)
-		delete[] L2[ch];
-	delete[] L2;
-
-	for (int ch = 0; ch < 3; ch++)
-		delete[] H2[ch];
-	delete[] H2;
-
-	for (int ch = 0; ch < 3; ch++)
-		delete[] HL2[ch];
-	delete[] HL2;
-
-	for (int ch = 0; ch < 3; ch++)
-		delete[] LH2[ch];
-	delete[] LH2;
-
-	for (int ch = 0; ch < 3; ch++)
-		delete[] HH2[ch];
-	delete[] HH2;
-
 	FILE* coefficient2 = fopen(coeffi2_path, "wb");
 	if (!coefficient2) {
 		cout << "coefficient2 not open" << endl;
@@ -207,63 +175,67 @@ int main(void)
 	}
 
 	for (int ch = 0; ch < 3; ch++) {
-		fwrite(&(coeffiecient[ch][0]), sizeof(unsigned char), m_iSize[ch], coefficient2);
+		fwrite(&(coeffiecient[ch][0]), sizeof(short), m_iSize[ch], coefficient2);
 	}
 	fclose(coefficient2);
 
 	/*
-	3단계
+	3단계 변환
 	*/
 
 	/* 수평방향으로 오버랩하지 않은 인접한 두 픽셀에 대하여 low-pass, high-pass filtering 수행 */
-	unsigned char** L3 = new unsigned char*[3];
+	short** L3 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		L3[ch] = new unsigned char[m_iSize[ch] / 32];
+		L3[ch] = new short[m_iSize[ch] / 32];
 
 	for (int ch = 0; ch < 3; ch++)  // low-pass filtering (Horizontal)
 		for (int i = 0; i < m_iSize[ch] / 32; i++)
-			L3[ch][i] = LL2[ch][2 * i] / 2 + LL2[ch][2 * i + 1] / 2;
+			L3[ch][i] = LL2[ch][2 * i] + LL2[ch][2 * i + 1];
 
-	unsigned char** H3 = new unsigned char*[3];
+	short** H3 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		H3[ch] = new unsigned char[m_iSize[ch] / 32];
+		H3[ch] = new short[m_iSize[ch] / 32];
 
 	for (int ch = 0; ch < 3; ch++)  // low-pass filtering (Horizontal)
 		for (int i = 0; i < m_iSize[ch] / 32; i++)
-			H3[ch][i] = LL2[ch][2 * i] / 2 - LL2[ch][2 * i + 1] / 2;
+			H3[ch][i] = LL2[ch][2 * i] - LL2[ch][2 * i + 1];
 
 	/* 수직방향으로 오버랩하지 않은 인접한 두 픽셀에 대하여 low-pass, high-pass filtering 수행 */
-	unsigned char** LL3 = new unsigned char*[3];
+	short** LL3 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		LL3[ch] = new unsigned char[m_iSize[ch] / 64];
+		LL3[ch] = new short[m_iSize[ch] / 64];
 
 	for (int ch = 0; ch < 3; ch++)  // low-pass filtering (Vertical)
-		for (int i = 0; i < m_iSize[ch] / 64; i++)
-			LL3[ch][i] = L3[ch][i] / 2 + L3[ch][WIDTH / 2 + i] / 2;
+		for (int i = 0; i < height[ch] / 8; i++)
+			for (int j = 0; j < width[ch] / 8; j++)
+				LL3[ch][((width[ch] / 8) * i) + j] = L3[ch][((width[ch] / 8) * (2 * i)) + j] + L3[ch][((width[ch] / 8) * (2 * i + 1)) + j];
 
-	unsigned char** LH3 = new unsigned char*[3];
+	short** LH3 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		LH3[ch] = new unsigned char[m_iSize[ch] / 64];
+		LH3[ch] = new short[m_iSize[ch] / 64];
 
 	for (int ch = 0; ch < 3; ch++)  // high-pass filtering (Vertical)
-		for (int i = 0; i < m_iSize[ch] / 64; i++)
-			LH3[ch][i] = L3[ch][i] / 2 - L3[ch][WIDTH / 2 + i] / 2;
+		for (int i = 0; i < height[ch] / 8; i++)
+			for (int j = 0; j < width[ch] / 8; j++)
+				LH3[ch][((width[ch] / 8) * i) + j] = L3[ch][((width[ch] / 8) * (2 * i)) + j] - L3[ch][((width[ch] / 8) * (2 * i + 1)) + j];
 
-	unsigned char** HL3 = new unsigned char*[3];
+	short** HL3 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		HL3[ch] = new unsigned char[m_iSize[ch] / 64];
+		HL3[ch] = new short[m_iSize[ch] / 64];
 
 	for (int ch = 0; ch < 3; ch++)  // low-pass filtering (Vertical)
-		for (int i = 0; i < m_iSize[ch] / 64; i++)
-			HL3[ch][i] = H3[ch][i] / 2 + H3[ch][WIDTH / 2 + i] / 2;
+		for (int i = 0; i < height[ch] / 8; i++)
+			for (int j = 0; j < width[ch] / 8; j++)
+				HL3[ch][((width[ch] / 8) * i) + j] = H3[ch][((width[ch] / 8) * (2 * i)) + j] + H3[ch][((width[ch] / 8) * (2 * i + 1)) + j];
 
-	unsigned char** HH3 = new unsigned char*[3];
+	short** HH3 = new short*[3];
 	for (int ch = 0; ch < 3; ch++)
-		HH3[ch] = new unsigned char[m_iSize[ch] / 64];
+		HH3[ch] = new short[m_iSize[ch] / 64];
 
 	for (int ch = 0; ch < 3; ch++)  // high-pass filtering (Vertical)
-		for (int i = 0; i < m_iSize[ch] / 64; i++)
-			HH3[ch][i] = H3[ch][i] / 2 - H3[ch][WIDTH / 2 + i] / 2;
+		for (int i = 0; i < height[ch] / 8; i++)
+			for (int j = 0; j < width[ch] / 8; j++)
+				HH3[ch][((width[ch] / 8) * i) + j] = H3[ch][((width[ch] / 8) * (2 * i)) + j] - H3[ch][((width[ch] / 8) * (2 * i + 1)) + j];
 
 	for (int ch = 0; ch < 3; ch++)
 		for (int i = 0; i < height[ch] / 8; i++)
@@ -274,26 +246,6 @@ int main(void)
 				coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8] = HH3[ch][(width[ch] / 8) * i + j];
 			}
 
-	for (int ch = 0; ch < 3; ch++)
-		delete[] L3[ch];
-	delete[] L3;
-
-	for (int ch = 0; ch < 3; ch++)
-		delete[] H3[ch];
-	delete[] H3;
-
-	for (int ch = 0; ch < 3; ch++)
-		delete[] HL3[ch];
-	delete[] HL3;
-
-	for (int ch = 0; ch < 3; ch++)
-		delete[] LH3[ch];
-	delete[] LH3;
-
-	for (int ch = 0; ch < 3; ch++)
-		delete[] HH3[ch];
-	delete[] HH3;
-
 	FILE* coefficient3 = fopen(coeffi3_path, "wb");
 	if (!coefficient3) {
 		cout << "coefficient3 not open" << endl;
@@ -301,11 +253,119 @@ int main(void)
 	}
 
 	for (int ch = 0; ch < 3; ch++) {
-		fwrite(&(coeffiecient[ch][0]), sizeof(unsigned char), m_iSize[ch], coefficient3);
+		fwrite(&(coeffiecient[ch][0]), sizeof(short), m_iSize[ch], coefficient3);
 	}
 	fclose(coefficient3);
 
-	////////// Step 3. Quantization //////////
+	////////// Step 3. Quantization & Inverse Quantization //////////
+	int c;
+	cout << "Case1. 양자화 x" << endl << "Case2. 각 영역에 대하여 8bit로 양자화" << endl << "Case3. 각 영역에 대하여 8bit 미만으로 양자화" << endl << endl;
+	cout << "Select: ";
+	cin >> c;
+
+	if (c == 1)  // Case1. 양자화 x
+		;
+	else if (c == 2)  // Case2. 각 영역에 대하여 8bit로 양자화
+	{
+		for (int ch = 0; ch < 3; ch++)
+			for (int i = 0; i < m_iSize[ch]; i++)
+				coeffiecient[ch][i] = coeffiecient[ch][i] >> 6;
+	}
+	else if (c == 3) // Case3. 각 영역에 대하여 8bit 미만으로 양자화
+	{
+		for (int ch = 0; ch < 3; ch++)
+			for (int i = 0; i < height[ch] / 8; i++)
+				for (int j = 0; j < width[ch] / 8; j++) {
+					coeffiecient[ch][width[ch] * i + j] = coeffiecient[ch][width[ch] * i + j] >> 7;  // LL3
+					coeffiecient[ch][width[ch] * i + j + width[ch] / 8] = coeffiecient[ch][width[ch] * i + j + width[ch] / 8] >> 7;  // HL3
+					coeffiecient[ch][width[ch] * (i + height[ch] / +8) + j] = coeffiecient[ch][width[ch] * (i + height[ch] / +8) + j] >> 7;  // LH3
+					coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8] = coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8] >> 7;  // HH3
+				}
+
+		for (int ch = 0; ch < 3; ch++)
+			for (int i = 0; i < height[ch] / 4; i++)
+				for (int j = 0; j < width[ch] / 4; j++) {
+					coeffiecient[ch][width[ch] * i + j + width[ch] / 4] = coeffiecient[ch][width[ch] * i + j + width[ch] / 4] >> 8;  // HL2
+					coeffiecient[ch][width[ch] * (i + height[ch] / 4) + j] = coeffiecient[ch][width[ch] * (i + height[ch] / 4) + j] >> 8;  // LH2
+					coeffiecient[ch][width[ch] * (i + height[ch] / 4) + j + width[ch] / 4] = coeffiecient[ch][width[ch] * (i + height[ch] / 4) + j + width[ch] / 4] >> 8;  // HH2
+				}
+
+		for (int ch = 0; ch < 3; ch++)
+			for (int i = 0; i < height[ch] / 2; i++)
+				for (int j = 0; j < width[ch] / 2; j++) {
+					coeffiecient[ch][width[ch] * i + j + width[ch] / 2] = coeffiecient[ch][width[ch] * i + j + width[ch] / 2] >> 9;  // HL1
+					coeffiecient[ch][width[ch] * (i + height[ch] / 2) + j] = coeffiecient[ch][width[ch] * (i + height[ch] / 2) + j] >> 9;  // LH1
+					coeffiecient[ch][width[ch] * (i + height[ch] / 2) + j + width[ch] / 2] = coeffiecient[ch][width[ch] * (i + height[ch] / 2) + j + width[ch] / 2] >> 9;  // HH1
+				}
+	}
+	else  // exception handling
+		;
+
+	////////// Step 4. haar inverse transform //////////
+
+	/*
+	1단계 역변환
+	*/
+
+	for (int ch = 0; ch < 3; ch++)  // LL3, LH3, HL3, HH3 -> L3, H3
+		for (int i = 0; i < height[ch] / 8; i++)
+			for (int j = 0; j < width[ch] / 8; j++) {
+				L3[ch][((width[ch] / 8) * (2 * i)) + j] = coeffiecient[ch][width[ch] * i + j] + coeffiecient[ch][width[ch] * (i + height[ch] / +8) + j];
+				L3[ch][((width[ch] / 8) * (2 * i + 1)) + j] = coeffiecient[ch][width[ch] * i + j] - coeffiecient[ch][width[ch] * (i + height[ch] / +8) + j];
+				H3[ch][((width[ch] / 8) * (2 * i)) + j] = coeffiecient[ch][width[ch] * i + j + width[ch] / 8] + coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8];
+				H3[ch][((width[ch] / 8) * (2 * i + 1)) + j] = coeffiecient[ch][width[ch] * i + j + width[ch] / 8] - coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8];
+			}
+
+	for (int ch = 0; ch < 3; ch++)  // L3, H3 -> LL2
+		for (int i = 0; i < m_iSize[ch] / 32; i++) {
+			LL2[ch][2 * i] = L3[ch][i] + H3[ch][i];
+			LL2[ch][2 * i + 1] = L3[ch][i] - H3[ch][i];
+		}
+
+	for (int ch = 0; ch < 3; ch++)
+		for (int i = 0; i < height[ch] / 4; i++)
+			for (int j = 0; j < width[ch] / 4; j++) {
+				coeffiecient[ch][width[ch] * i + j] = LL2[ch][width[ch] / 4 * i + j];
+			}
+
+	FILE* inv_coefficient1 = fopen("./transform_coefficients/BasketballDrill_832x480_yuv420_14bit_inv_coefficient1.yuv", "wb");
+	if (!inv_coefficient1) {
+		cout << "inv_coefficient1 not open" << endl;
+		return 0;
+	}
+
+	for (int ch = 0; ch < 3; ch++) {
+		fwrite(&(coeffiecient[ch][0]), sizeof(short), m_iSize[ch], inv_coefficient1);
+	}
+	fclose(inv_coefficient1);
+
+	/*
+	2단계 역변환
+	*/
+
+	//for (int ch = 0; ch < 3; ch++)  // LL2, LH2, HL2, HH2 -> L2, H2
+	//	for (int i = 0; i < height[ch] / 4; i++)
+	//		for (int j = 0; j < width[ch] / 4; j++) {
+	//			L2[ch][((width[ch] / 4) * (2 * i)) + j] = LL2[ch][width[ch] * i + j] + coeffiecient[ch][width[ch] * (i + height[ch] / +8) + j];
+	//			L2[ch][((width[ch] / 4) * (2 * i + 1)) + j] = coeffiecient[ch][width[ch] * i + j] - coeffiecient[ch][width[ch] * (i + height[ch] / +8) + j];
+	//			H2[ch][((width[ch] / 4) * (2 * i)) + j] = coeffiecient[ch][width[ch] * i + j + width[ch] / 8] + coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8];
+	//			H2[ch][((width[ch] / 4) * (2 * i + 1)) + j] = coeffiecient[ch][width[ch] * i + j + width[ch] / 8] - coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8];
+	//		}
+
+	//for (int ch = 0; ch < 3; ch++)  // L3, H3 -> LL2
+	//	for (int i = 0; i < m_iSize[ch] / 32; i++) {
+	//		LL2[ch][2 * i] = L3[ch][i] + H3[ch][i];
+	//		LL2[ch][2 * i + 1] = L3[ch][i] - H3[ch][i];
+	//	}
+
+	//for (int ch = 0; ch < 3; ch++)
+	//	for (int i = 0; i < height[ch] / 4; i++)
+	//		for (int j = 0; j < width[ch] / 4; j++) {
+	//			coeffiecient[ch][width[ch] * i + j] = LL2[ch][width[ch] / 4 * i + j];
+	//		}
+
+
+
 
 	return 0;
 } // end of main()
