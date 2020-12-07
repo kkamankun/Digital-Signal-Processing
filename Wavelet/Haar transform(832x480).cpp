@@ -8,6 +8,10 @@ int main(void)
 	for (int i = 0; i < 3; i++)
 		m_ui8Comp0[i] = new unsigned char[m_iSize[i]];
 
+	m_ui8Comp1 = new unsigned char*[3];
+	for (int i = 0; i < 3; i++)
+		m_ui8Comp1[i] = new unsigned char[m_iSize[i]];
+
 	FILE *original_image = fopen(ori_path, "rb");
 	if (!original_image) {
 		cout << "original image not open" << endl;
@@ -310,16 +314,16 @@ int main(void)
 	for (int ch = 0; ch < 3; ch++)  // LL3, LH3, HL3, HH3 -> L3, H3
 		for (int i = 0; i < height[ch] / 8; i++)
 			for (int j = 0; j < width[ch] / 8; j++) {
-				L3[ch][((width[ch] / 8) * (2 * i)) + j] = coeffiecient[ch][width[ch] * i + j] + coeffiecient[ch][width[ch] * (i + height[ch] / +8) + j];
-				L3[ch][((width[ch] / 8) * (2 * i + 1)) + j] = coeffiecient[ch][width[ch] * i + j] - coeffiecient[ch][width[ch] * (i + height[ch] / +8) + j];
-				H3[ch][((width[ch] / 8) * (2 * i)) + j] = coeffiecient[ch][width[ch] * i + j + width[ch] / 8] + coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8];
-				H3[ch][((width[ch] / 8) * (2 * i + 1)) + j] = coeffiecient[ch][width[ch] * i + j + width[ch] / 8] - coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8];
+				L3[ch][((width[ch] / 8) * (2 * i)) + j] = (coeffiecient[ch][width[ch] * i + j] + coeffiecient[ch][width[ch] * (i + height[ch] / +8) + j]) / 2;
+				L3[ch][((width[ch] / 8) * (2 * i + 1)) + j] = (coeffiecient[ch][width[ch] * i + j] - coeffiecient[ch][width[ch] * (i + height[ch] / +8) + j]) / 2;
+				H3[ch][((width[ch] / 8) * (2 * i)) + j] = (coeffiecient[ch][width[ch] * i + j + width[ch] / 8] + coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8]) / 2;
+				H3[ch][((width[ch] / 8) * (2 * i + 1)) + j] = (coeffiecient[ch][width[ch] * i + j + width[ch] / 8] - coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8]) / 2;
 			}
 
 	for (int ch = 0; ch < 3; ch++)  // L3, H3 -> LL2
 		for (int i = 0; i < m_iSize[ch] / 32; i++) {
-			LL2[ch][2 * i] = L3[ch][i] + H3[ch][i];
-			LL2[ch][2 * i + 1] = L3[ch][i] - H3[ch][i];
+			LL2[ch][2 * i] = (L3[ch][i] + H3[ch][i]) / 2;
+			LL2[ch][2 * i + 1] = (L3[ch][i] - H3[ch][i]) / 2;
 		}
 
 	for (int ch = 0; ch < 3; ch++)
@@ -328,42 +332,83 @@ int main(void)
 				coeffiecient[ch][width[ch] * i + j] = LL2[ch][width[ch] / 4 * i + j];
 			}
 
-	FILE* inv_coefficient1 = fopen("./transform_coefficients/BasketballDrill_832x480_yuv420_14bit_inv_coefficient1.yuv", "wb");
-	if (!inv_coefficient1) {
-		cout << "inv_coefficient1 not open" << endl;
-		return 0;
-	}
+	//FILE* inv_coefficient1 = fopen("./transform_coefficients/BasketballDrill_832x480_yuv420_12bit_inv_coefficient1.yuv", "wb");
+	//if (!inv_coefficient1) {
+	//	cout << "inv_coefficient1 not open" << endl;
+	//	return 0;
+	//}
 
-	for (int ch = 0; ch < 3; ch++) {
-		fwrite(&(coeffiecient[ch][0]), sizeof(short), m_iSize[ch], inv_coefficient1);
-	}
-	fclose(inv_coefficient1);
+	//for (int ch = 0; ch < 3; ch++) {
+	//	fwrite(&(coeffiecient[ch][0]), sizeof(short), m_iSize[ch], inv_coefficient1);
+	//}
+	//fclose(inv_coefficient1);
+
 
 	/*
 	2단계 역변환
 	*/
 
-	//for (int ch = 0; ch < 3; ch++)  // LL2, LH2, HL2, HH2 -> L2, H2
-	//	for (int i = 0; i < height[ch] / 4; i++)
-	//		for (int j = 0; j < width[ch] / 4; j++) {
-	//			L2[ch][((width[ch] / 4) * (2 * i)) + j] = LL2[ch][width[ch] * i + j] + coeffiecient[ch][width[ch] * (i + height[ch] / +8) + j];
-	//			L2[ch][((width[ch] / 4) * (2 * i + 1)) + j] = coeffiecient[ch][width[ch] * i + j] - coeffiecient[ch][width[ch] * (i + height[ch] / +8) + j];
-	//			H2[ch][((width[ch] / 4) * (2 * i)) + j] = coeffiecient[ch][width[ch] * i + j + width[ch] / 8] + coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8];
-	//			H2[ch][((width[ch] / 4) * (2 * i + 1)) + j] = coeffiecient[ch][width[ch] * i + j + width[ch] / 8] - coeffiecient[ch][width[ch] * (i + height[ch] / 8) + j + width[ch] / 8];
-	//		}
+	for (int ch = 0; ch < 3; ch++)  // LL2, LH2, HL2, HH2 -> L2, H2
+		for (int i = 0; i < height[ch] / 4; i++)
+			for (int j = 0; j < width[ch] / 4; j++) {
+				L2[ch][((width[ch] / 4) * (2 * i)) + j] = (coeffiecient[ch][width[ch] * i + j] + coeffiecient[ch][width[ch] * (i + height[ch] / 4) + j]) / 2;
+				L2[ch][((width[ch] / 4) * (2 * i + 1)) + j] = (coeffiecient[ch][width[ch] * i + j] - coeffiecient[ch][width[ch] * (i + height[ch] / 4) + j]) / 2;
+				H2[ch][((width[ch] / 4) * (2 * i)) + j] = (coeffiecient[ch][width[ch] * i + j + width[ch] / 4] + coeffiecient[ch][width[ch] * (i + height[ch] / 4) + j + width[ch] / 4]) / 2;
+				H2[ch][((width[ch] / 4) * (2 * i + 1)) + j] = (coeffiecient[ch][width[ch] * i + j + width[ch] / 4] - coeffiecient[ch][width[ch] * (i + height[ch] / 4) + j + width[ch] / 4]) / 2;
+			}
 
-	//for (int ch = 0; ch < 3; ch++)  // L3, H3 -> LL2
-	//	for (int i = 0; i < m_iSize[ch] / 32; i++) {
-	//		LL2[ch][2 * i] = L3[ch][i] + H3[ch][i];
-	//		LL2[ch][2 * i + 1] = L3[ch][i] - H3[ch][i];
-	//	}
+	for (int ch = 0; ch < 3; ch++)  // L2, H2 -> LL1
+		for (int i = 0; i < m_iSize[ch] / 8; i++) {
+			LL1[ch][2 * i] = (L2[ch][i] + H2[ch][i]) / 2;
+			LL1[ch][2 * i + 1] = (L2[ch][i] - H2[ch][i]) / 2;
+		}
 
-	//for (int ch = 0; ch < 3; ch++)
-	//	for (int i = 0; i < height[ch] / 4; i++)
-	//		for (int j = 0; j < width[ch] / 4; j++) {
-	//			coeffiecient[ch][width[ch] * i + j] = LL2[ch][width[ch] / 4 * i + j];
-	//		}
+	for (int ch = 0; ch < 3; ch++)
+		for (int i = 0; i < height[ch] / 2; i++)
+			for (int j = 0; j < width[ch] / 2; j++) {
+				coeffiecient[ch][width[ch] * i + j] = LL1[ch][width[ch] / 2 * i + j];
+			}
 
+	//FILE* inv_coefficient2 = fopen("./transform_coefficients/BasketballDrill_832x480_yuv420_10bit_inv_coefficient2.yuv", "wb");
+	//if (!inv_coefficient2) {
+	//	cout << "inv_coefficient2 not open" << endl;
+	//	return 0;
+	//}
+
+	//for (int ch = 0; ch < 3; ch++) {
+	//	fwrite(&(coeffiecient[ch][0]), sizeof(short), m_iSize[ch], inv_coefficient2);
+	//}
+	//fclose(inv_coefficient2);
+
+	/*
+	3단계 역변환
+	*/
+
+	for (int ch = 0; ch < 3; ch++)  // LL1, LH1, HL1, HH1 -> L1, H1
+		for (int i = 0; i < height[ch] / 2; i++)
+			for (int j = 0; j < width[ch] / 2; j++) {
+				L1[ch][((width[ch] / 2) * (2 * i)) + j] = (coeffiecient[ch][width[ch] * i + j] + coeffiecient[ch][width[ch] * (i + height[ch] / 2) + j]) / 2;
+				L1[ch][((width[ch] / 2) * (2 * i + 1)) + j] = (coeffiecient[ch][width[ch] * i + j] - coeffiecient[ch][width[ch] * (i + height[ch] / 2) + j]) / 2;
+				H1[ch][((width[ch] / 2) * (2 * i)) + j] = (coeffiecient[ch][width[ch] * i + j + width[ch] / 2] + coeffiecient[ch][width[ch] * (i + height[ch] / 2) + j + width[ch] / 2]) / 2;
+				H1[ch][((width[ch] / 2) * (2 * i + 1)) + j] = (coeffiecient[ch][width[ch] * i + j + width[ch] / 2] - coeffiecient[ch][width[ch] * (i + height[ch] / 2) + j + width[ch] / 2]) / 2;
+			}
+
+	for (int ch = 0; ch < 3; ch++)  // L1, H1 -> Reconstructed image
+		for (int i = 0; i < m_iSize[ch] / 2; i++) {
+			m_ui8Comp1[ch][2 * i] = (L1[ch][i] + H1[ch][i]) / 2;
+			m_ui8Comp1[ch][2 * i + 1] = (L1[ch][i] - H1[ch][i]) / 2;
+		}
+	
+	FILE* reconstructed_image = fopen("./transform_coefficients/BasketballDrill_832x480_yuv420_8bit_reconstructed_image.yuv", "wb");
+	if (!reconstructed_image) {
+		cout << "reconstructed_image not open" << endl;
+		return 0;
+	}
+
+	for (int ch = 0; ch < 3; ch++) {
+		fwrite(&(m_ui8Comp1[ch][0]), sizeof(unsigned char), m_iSize[ch], reconstructed_image);
+	}
+	fclose(reconstructed_image);
 
 
 
